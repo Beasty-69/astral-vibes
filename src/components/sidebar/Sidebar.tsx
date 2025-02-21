@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Home, Search, Library, Plus, Menu } from "lucide-react";
+import { Home, Search, Library, Plus, Menu, Users, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Sidebar = () => {
@@ -20,7 +20,7 @@ const Sidebar = () => {
       <div
         className={`fixed left-0 top-0 bottom-0 w-60 p-6 bg-card glass transform transition-transform duration-300 md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } z-40`}
       >
         <div className="flex flex-col h-full">
           <div className="mb-8">
@@ -42,6 +42,10 @@ const Sidebar = () => {
               <Library size={20} />
               Your Library
             </Link>
+            <Link to="/friends" className="sidebar-link" onClick={() => setIsOpen(false)}>
+              <Users size={20} />
+              Friends
+            </Link>
           </nav>
 
           <div className="mt-8 pt-8 border-t border-white/10">
@@ -52,15 +56,22 @@ const Sidebar = () => {
           </div>
 
           <div className="mt-auto">
-            <div className="glass rounded-lg p-4">
-              <h3 className="text-sm font-medium mb-2">Get Premium</h3>
+            <Link
+              to="/subscription"
+              className="glass rounded-lg p-4 block hover:scale-[1.02] transition-transform"
+              onClick={() => setIsOpen(false)}
+            >
+              <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                <Crown size={18} className="text-primary" />
+                <h3>Get Premium</h3>
+              </div>
               <p className="text-xs text-muted-foreground">
                 Listen without limits and ad-free.
               </p>
               <button className="mt-3 w-full bg-primary text-primary-foreground rounded-md py-2 text-sm font-medium transition-colors hover:bg-primary/90">
                 Try Now
               </button>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
@@ -68,7 +79,7 @@ const Sidebar = () => {
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
