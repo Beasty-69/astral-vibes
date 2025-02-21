@@ -1,12 +1,21 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import Sidebar from "@/components/sidebar/Sidebar";
+import MiniPlayer from "@/components/Player/MiniPlayer";
+import FeaturedSection from "@/components/Home/FeaturedSection";
+import RecentlyPlayed from "@/components/Home/RecentlyPlayed";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Sidebar />
+      <main className="ml-60 p-8 pb-24">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-4xl font-bold mb-8">Welcome to Nebula</h1>
+          <FeaturedSection />
+          <RecentlyPlayed />
+        </div>
+      </main>
+      <MiniPlayer />
     </div>
   );
 };
