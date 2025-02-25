@@ -16,26 +16,68 @@ const Auth = () => {
   const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
 
+  // Enhanced session handling with error logging
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Session check error:", error);
+          return;
+        }
+        setSession(session);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+          console.log("Auth state changed:", _event);
+          setSession(session);
+        });
 
-    return () => subscription.unsubscribe();
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error("Session management error:", error);
+      }
+    };
+
+    checkSession();
   }, []);
 
   if (session) {
     return <Navigate to="/" replace />;
   }
 
+  const validateInput = () => {
+    if (!email || !password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (password.length < 6) {
+      toast({
+        title: "Invalid password",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateInput() || !username) {
+      toast({
+        title: "Missing username",
+        description: "Please provide a username.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -62,8 +104,10 @@ const Auth = () => {
           title: "Success!",
           description: "Please check your email for the confirmation link before logging in.",
         });
+        console.log("Signup successful:", data);
       }
     } catch (error: any) {
+      console.error("Signup error:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -76,7 +120,10 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateInput()) return;
+    
     setLoading(true);
+    console.log("Attempting login with:", { email });
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -85,10 +132,17 @@ const Auth = () => {
       });
 
       if (error) {
+        console.error("Login error:", error);
         if (error.message.includes("Email not confirmed")) {
           toast({
             title: "Email not confirmed",
             description: "Please check your email and click the confirmation link before logging in.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Invalid login credentials")) {
+          toast({
+            title: "Invalid credentials",
+            description: "Please check your email and password and try again.",
             variant: "destructive",
           });
         } else {
@@ -99,12 +153,14 @@ const Auth = () => {
           });
         }
       } else if (data?.user) {
+        console.log("Login successful:", data);
         toast({
           title: "Success!",
           description: "You have been logged in successfully.",
         });
       }
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: error.message,
