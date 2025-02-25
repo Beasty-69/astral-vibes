@@ -39,7 +39,7 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -51,10 +51,18 @@ const Auth = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Success!",
-        description: "Check your email for the confirmation link.",
-      });
+      if (data?.user?.identities?.length === 0) {
+        toast({
+          title: "Account already exists",
+          description: "Please try logging in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "Please check your email for the confirmation link before logging in.",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -71,12 +79,31 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email not confirmed",
+            description: "Please check your email and click the confirmation link before logging in.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } else if (data?.user) {
+        toast({
+          title: "Success!",
+          description: "You have been logged in successfully.",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -171,4 +198,3 @@ const Auth = () => {
 };
 
 export default Auth;
-
