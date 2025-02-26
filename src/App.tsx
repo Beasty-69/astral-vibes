@@ -60,7 +60,6 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<Auth />} />
             <Route
               path="/"
               element={
@@ -69,6 +68,7 @@ const App = () => (
                 </PrivateRoute>
               }
             />
+            <Route path="/auth" element={<Auth />} />
             <Route
               path="/search"
               element={
@@ -118,4 +118,3 @@ const App = () => (
 );
 
 export default App;
-
