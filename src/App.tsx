@@ -3,9 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Library from "./pages/Library";
@@ -13,44 +11,8 @@ import Friends from "./pages/Friends";
 import Subscription from "./pages/Subscription";
 import LikedSongs from "./pages/LikedSongs";
 import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
-
-const AuthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -60,55 +22,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
-                <AuthenticatedRoute>
-                  <Index />
-                </AuthenticatedRoute>
-              }
-            />
-            <Route
-              path="/search"
-              element={
-                <AuthenticatedRoute>
-                  <Search />
-                </AuthenticatedRoute>
-              }
-            />
-            <Route
-              path="/library"
-              element={
-                <AuthenticatedRoute>
-                  <Library />
-                </AuthenticatedRoute>
-              }
-            />
-            <Route
-              path="/friends"
-              element={
-                <AuthenticatedRoute>
-                  <Friends />
-                </AuthenticatedRoute>
-              }
-            />
-            <Route
-              path="/subscription"
-              element={
-                <AuthenticatedRoute>
-                  <Subscription />
-                </AuthenticatedRoute>
-              }
-            />
-            <Route
-              path="/liked-songs"
-              element={
-                <AuthenticatedRoute>
-                  <LikedSongs />
-                </AuthenticatedRoute>
-              }
-            />
+            <Route path="/" element={<Index />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/friends" element={<Friends />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/liked-songs" element={<LikedSongs />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
