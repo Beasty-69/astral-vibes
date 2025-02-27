@@ -89,6 +89,48 @@ export type Database = {
         }
         Relationships: []
       }
+      play_history: {
+        Row: {
+          completed: boolean | null
+          id: string
+          played_at: string | null
+          played_duration: number | null
+          song_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          id?: string
+          played_at?: string | null
+          played_duration?: number | null
+          song_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          id?: string
+          played_at?: string | null
+          played_duration?: number | null
+          song_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_history_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "play_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_songs: {
         Row: {
           added_at: string | null
@@ -181,7 +223,9 @@ export type Database = {
           cover_url: string | null
           created_at: string | null
           duration: number
+          genre: string | null
           id: string
+          release_date: string | null
           title: string
         }
         Insert: {
@@ -191,7 +235,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           duration: number
+          genre?: string | null
           id?: string
+          release_date?: string | null
           title: string
         }
         Update: {
@@ -201,7 +247,9 @@ export type Database = {
           cover_url?: string | null
           created_at?: string | null
           duration?: number
+          genre?: string | null
           id?: string
+          release_date?: string | null
           title?: string
         }
         Relationships: []
