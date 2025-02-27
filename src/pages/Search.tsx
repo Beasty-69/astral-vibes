@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Search as SearchIcon, PlayCircle } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
@@ -6,10 +5,12 @@ import MiniPlayer from "@/components/Player/MiniPlayer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAudioPlayer } from "@/components/Player/AudioPlayer";
 
 const Search = () => {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { play } = useAudioPlayer();
 
   const categories = [
     { id: 1, name: "Hip Hop", color: "from-purple-500 to-pink-500" },
@@ -24,12 +25,12 @@ const Search = () => {
     queryKey: ["search", query, selectedCategory],
     queryFn: async () => {
       try {
-        let query_builder = supabase
-          .from("songs")
-          .select("*");
+        let query_builder = supabase.from("songs").select("*");
 
         if (query) {
-          query_builder = query_builder.or(`title.ilike.%${query}%,artist.ilike.%${query}%`);
+          query_builder = query_builder.or(
+            `title.ilike.%${query}%,artist.ilike.%${query}%`
+          );
         }
 
         if (selectedCategory) {
@@ -54,10 +55,8 @@ const Search = () => {
     enabled: query.length > 0 || selectedCategory !== null,
   });
 
-  const handlePlaySong = (songId: string) => {
-    // This will be implemented in the next step with the audio playback feature
-    console.log("Playing song:", songId);
-    toast.info("Audio playback will be implemented in the next step!");
+  const handlePlaySong = (song: any) => {
+    play(song);
   };
 
   return (
@@ -66,7 +65,10 @@ const Search = () => {
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="relative mb-8">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+            <SearchIcon
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              size={20}
+            />
             <input
               type="text"
               placeholder="What do you want to listen to?"
@@ -82,12 +84,20 @@ const Search = () => {
               <div
                 key={category.id}
                 className={`aspect-square rounded-lg overflow-hidden card-hover cursor-pointer transition-transform 
-                  ${selectedCategory === category.name ? 'ring-2 ring-primary scale-[0.98]' : ''}`}
-                onClick={() => setSelectedCategory(
-                  selectedCategory === category.name ? null : category.name
-                )}
+                  ${
+                    selectedCategory === category.name
+                      ? "ring-2 ring-primary scale-[0.98]"
+                      : ""
+                  }`}
+                onClick={() =>
+                  setSelectedCategory(
+                    selectedCategory === category.name ? null : category.name
+                  )
+                }
               >
-                <div className={`w-full h-full bg-gradient-to-br ${category.color} p-4 flex items-end`}>
+                <div
+                  className={`w-full h-full bg-gradient-to-br ${category.color} p-4 flex items-end`}
+                >
                   <h3 className="text-lg font-bold">{category.name}</h3>
                 </div>
               </div>
@@ -97,7 +107,9 @@ const Search = () => {
           {(query || selectedCategory) && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">
-                {isLoading ? "Searching..." : `Search Results (${searchResults?.length || 0})`}
+                {isLoading
+                  ? "Searching..."
+                  : `Search Results (${searchResults?.length || 0})`}
               </h3>
               <div className="glass rounded-lg overflow-hidden">
                 <table className="w-full">
@@ -105,8 +117,12 @@ const Search = () => {
                     <tr>
                       <th className="text-left p-4">#</th>
                       <th className="text-left p-4">Title</th>
-                      <th className="text-left p-4 hidden md:table-cell">Artist</th>
-                      <th className="text-left p-4 hidden md:table-cell">Album</th>
+                      <th className="text-left p-4 hidden md:table-cell">
+                        Artist
+                      </th>
+                      <th className="text-left p-4 hidden md:table-cell">
+                        Album
+                      </th>
                       <th className="text-right p-4">Duration</th>
                     </tr>
                   </thead>
@@ -115,12 +131,15 @@ const Search = () => {
                       <tr
                         key={song.id}
                         className="hover:bg-white/5 transition-colors group cursor-pointer"
-                        onClick={() => handlePlaySong(song.id)}
+                        onClick={() => handlePlaySong(song)}
                       >
                         <td className="p-4 w-12">
                           <div className="flex items-center">
                             <span className="group-hover:hidden">{index + 1}</span>
-                            <PlayCircle size={16} className="hidden group-hover:block text-primary" />
+                            <PlayCircle
+                              size={16}
+                              className="hidden group-hover:block text-primary"
+                            />
                           </div>
                         </td>
                         <td className="p-4">
@@ -144,7 +163,8 @@ const Search = () => {
                           {song.album}
                         </td>
                         <td className="p-4 text-right text-muted-foreground">
-                          {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}
+                          {Math.floor(song.duration / 60)}:
+                          {(song.duration % 60).toString().padStart(2, "0")}
                         </td>
                       </tr>
                     ))}
