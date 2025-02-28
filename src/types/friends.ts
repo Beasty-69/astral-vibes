@@ -18,4 +18,6 @@ export interface FriendSuggestion {
   id: string;
   name: string;
   mutualFriends?: number;
+  avatar?: string;
+  status?: 'pending' | 'accepted' | 'rejected';
 }
