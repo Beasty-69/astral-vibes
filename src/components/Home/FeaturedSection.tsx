@@ -8,18 +8,18 @@ const FeaturedSection = () => {
   ];
 
   return (
-    <section className="mb-12">
-      <h2 className="text-2xl font-bold mb-6">Featured Playlists</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <section className="mb-8 md:mb-12">
+      <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Featured Playlists</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {playlists.map((playlist) => (
           <div
             key={playlist.id}
-            className="glass p-4 rounded-lg card-hover animate-fade-in"
+            className="glass p-3 md:p-4 rounded-lg card-hover animate-fade-in"
             style={{ animationDelay: `${playlist.id * 100}ms` }}
           >
-            <div className="aspect-square bg-nebula-400/10 rounded-md mb-4" />
-            <h3 className="font-medium mb-1">{playlist.title}</h3>
-            <p className="text-sm text-muted-foreground">{playlist.description}</p>
+            <div className="aspect-square bg-nebula-400/10 rounded-md mb-3 md:mb-4" />
+            <h3 className="font-medium mb-1 text-sm md:text-base">{playlist.title}</h3>
+            <p className="text-xs md:text-sm text-muted-foreground">{playlist.description}</p>
           </div>
         ))}
       </div>
