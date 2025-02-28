@@ -4,7 +4,7 @@ import { Search as SearchIcon } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import FriendsList from "@/components/friends/FriendsList";
 import ChatWindow from "@/components/friends/ChatWindow";
 import FriendSuggestions from "@/components/friends/FriendSuggestions";
@@ -18,45 +18,38 @@ const Friends = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserAndFriends = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        
-        const { data: friendships, error: friendsError } = await supabase
-          .from('friendships')
-          .select(`
-            id,
-            friend:profiles!friend_id(id, username)
-          `)
-          .eq('user_id', user.id)
-          .eq('status', 'accepted');
-
-        if (friendsError) {
-          console.error('Error fetching friends:', friendsError);
-          toast({
-            title: "Error",
-            description: "Could not fetch friends list",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (friendships) {
-          setFriends(friendships.map(f => ({
-            id: f.friend.id,
-            name: f.friend.username || 'Unknown User',
-            online: true, // We'll implement real presence later
-          })));
-        }
+    // Mock user ID for demo without authentication
+    const demoUserId = "00000000-0000-0000-0000-000000000000";
+    setCurrentUserId(demoUserId);
+    
+    // Load sample friends for demo
+    const sampleFriends: Friend[] = [
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        name: "Alex Johnson",
+        online: true,
+        currentTrack: "Billie Jean - Michael Jackson"
+      },
+      {
+        id: "22222222-2222-2222-2222-222222222222",
+        name: "Taylor Swift",
+        online: true,
+      },
+      {
+        id: "33333333-3333-3333-3333-333333333333",
+        name: "Ed Sheeran",
+        online: false,
       }
-    };
+    ];
+    
+    setFriends(sampleFriends);
+    setLoading(false);
+  }, []);
 
-    fetchUserAndFriends();
-  }, [toast]);
-
+  // Setup real-time message subscription
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -81,26 +74,45 @@ const Friends = () => {
     };
   }, [currentUserId]);
 
+  // Fetch messages when a chat is selected
   useEffect(() => {
     if (selectedChat && currentUserId) {
       const fetchMessages = async () => {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${selectedChat}),and(sender_id.eq.${selectedChat},receiver_id.eq.${currentUserId})`)
-          .order('created_at', { ascending: true });
-
-        if (error) {
+        try {
+          // For demo, we'll create some mock messages
+          const mockMessages: Message[] = [
+            {
+              id: "msg1",
+              content: "Hey there! How's it going?",
+              sender_id: selectedChat,
+              receiver_id: currentUserId,
+              created_at: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              id: "msg2",
+              content: "I'm doing great! Just listening to some music.",
+              sender_id: currentUserId,
+              receiver_id: selectedChat,
+              created_at: new Date(Date.now() - 3500000).toISOString()
+            },
+            {
+              id: "msg3",
+              content: "What are you listening to?",
+              sender_id: selectedChat,
+              receiver_id: currentUserId,
+              created_at: new Date(Date.now() - 3400000).toISOString()
+            }
+          ];
+          
+          setMessages(mockMessages);
+        } catch (error) {
           console.error('Error fetching messages:', error);
           toast({
             title: "Error",
             description: "Could not fetch messages",
             variant: "destructive",
           });
-          return;
         }
-
-        setMessages(data || []);
       };
 
       fetchMessages();
@@ -110,28 +122,58 @@ const Friends = () => {
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedChat || !currentUserId) return;
 
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        content: messageInput,
-        sender_id: currentUserId,
-        receiver_id: selectedChat,
-      });
-
-    if (error) {
+    // Create a temporary message ID
+    const tempId = `temp-${Date.now()}`;
+    
+    // Create a new message object
+    const newMessage: Message = {
+      id: tempId,
+      content: messageInput,
+      sender_id: currentUserId,
+      receiver_id: selectedChat,
+      created_at: new Date().toISOString()
+    };
+    
+    // Optimistically add to UI
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Clear input
+    setMessageInput("");
+    
+    try {
+      // In a real app, we would save to Supabase here
+      console.log("Message sent:", newMessage);
+      
+      // For demo, we don't need to do the actual API call
+      // const { error } = await supabase
+      //   .from('messages')
+      //   .insert({
+      //     content: messageInput,
+      //     sender_id: currentUserId,
+      //     receiver_id: selectedChat,
+      //   });
+      
+      // if (error) throw error;
+    } catch (error) {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Could not send message",
         variant: "destructive",
       });
-      return;
+      
+      // Remove the temporary message
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
     }
-
-    setMessageInput("");
   };
 
   const selectedFriend = friends.find(f => f.id === selectedChat);
+
+  const filteredFriends = searchQuery 
+    ? friends.filter(friend => 
+        friend.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : friends;
 
   return (
     <div className="min-h-screen bg-background">
@@ -157,7 +199,7 @@ const Friends = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <FriendsList
-                friends={friends}
+                friends={filteredFriends}
                 selectedChat={selectedChat}
                 onChatSelect={(friendId) => setSelectedChat(selectedChat === friendId ? null : friendId)}
               />

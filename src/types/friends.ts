@@ -13,3 +13,9 @@ export interface Message {
   receiver_id: string;
   created_at: string;
 }
+
+export interface FriendSuggestion {
+  id: string;
+  name: string;
+  mutualFriends?: number;
+}
