@@ -1,8 +1,9 @@
 
-import { Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward, Volume2, Heart } from "lucide-react";
 import { useAudioPlayer } from "./AudioPlayer";
 import { Slider } from "../ui/slider";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 const MiniPlayer = () => {
   const {
@@ -16,7 +17,25 @@ const MiniPlayer = () => {
     resume,
     seek,
     setVolume,
+    toggleLike,
+    isLiked,
   } = useAudioPlayer();
+
+  const [liked, setLiked] = useState(false);
+
+  useEffect(() => {
+    // Check if current song is liked when it changes
+    const checkLikeStatus = async () => {
+      if (currentSong) {
+        const songIsLiked = await isLiked(currentSong.id);
+        setLiked(songIsLiked);
+      } else {
+        setLiked(false);
+      }
+    };
+    
+    checkLikeStatus();
+  }, [currentSong, isLiked]);
 
   const handleProgressChange = (value: number[]) => {
     seek(value[0] * duration);
@@ -24,6 +43,13 @@ const MiniPlayer = () => {
 
   const handleVolumeChange = (value: number[]) => {
     setVolume(value[0]);
+  };
+
+  const handleLikeToggle = async () => {
+    if (currentSong) {
+      await toggleLike(currentSong.id);
+      setLiked(!liked); // Optimistic update
+    }
   };
 
   const formatTime = (time: number) => {
@@ -100,15 +126,27 @@ const MiniPlayer = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-32">
-          <Volume2 size={20} className="text-muted-foreground" />
-          <Slider
-            value={[volume]}
-            max={1}
-            step={0.01}
-            className="w-24"
-            onValueChange={handleVolumeChange}
-          />
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleLikeToggle}
+            className={cn(
+              "hover:scale-110 transition-transform",
+              liked ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+            disabled={!currentSong}
+          >
+            <Heart size={20} fill={liked ? "currentColor" : "none"} />
+          </button>
+          <div className="flex items-center gap-2 min-w-32">
+            <Volume2 size={20} className="text-muted-foreground" />
+            <Slider
+              value={[volume]}
+              max={1}
+              step={0.01}
+              className="w-24"
+              onValueChange={handleVolumeChange}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -116,4 +154,3 @@ const MiniPlayer = () => {
 };
 
 export default MiniPlayer;
-

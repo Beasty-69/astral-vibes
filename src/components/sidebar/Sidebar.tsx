@@ -1,10 +1,17 @@
-
 import { useState } from "react";
-import { Home, Search, Library, Plus, Menu, Users, Crown } from "lucide-react";
+import { Home, Search, Library, Plus, Menu, Users, Crown, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const navigationItems = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Search", href: "/search", icon: Search },
+    { name: "Your Library", href: "/library", icon: Library },
+    { name: "Friends", href: "/friends", icon: Users },
+    { name: "Referrals", href: "/referrals", icon: Gift },
+  ];
 
   return (
     <>
@@ -30,22 +37,17 @@ const Sidebar = () => {
           </div>
           
           <nav className="space-y-1">
-            <Link to="/" className="sidebar-link" onClick={() => setIsOpen(false)}>
-              <Home size={20} />
-              Home
-            </Link>
-            <Link to="/search" className="sidebar-link" onClick={() => setIsOpen(false)}>
-              <Search size={20} />
-              Search
-            </Link>
-            <Link to="/library" className="sidebar-link" onClick={() => setIsOpen(false)}>
-              <Library size={20} />
-              Your Library
-            </Link>
-            <Link to="/friends" className="sidebar-link" onClick={() => setIsOpen(false)}>
-              <Users size={20} />
-              Friends
-            </Link>
+            {navigationItems.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className="sidebar-link"
+                onClick={() => setIsOpen(false)}
+              >
+                {item.icon && <item.icon size={20} />}
+                {item.name}
+              </Link>
+            ))}
           </nav>
 
           <div className="mt-8 pt-8 border-t border-white/10">

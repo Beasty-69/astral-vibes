@@ -1,6 +1,7 @@
 
 import { createContext, useContext, useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AudioPlayerContextType {
   currentSong: Song | null;
@@ -14,6 +15,8 @@ interface AudioPlayerContextType {
   resume: () => void;
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
+  toggleLike: (songId: string) => Promise<void>;
+  isLiked: (songId: string) => Promise<boolean>;
 }
 
 interface Song {
@@ -42,6 +45,7 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playTimer = useRef<NodeJS.Timeout | null>(null);
 
   const progress = currentTime / (duration || 1);
 
@@ -60,6 +64,11 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     audio.addEventListener("ended", () => {
       setIsPlaying(false);
       setCurrentTime(0);
+      
+      // Track completion when song ends
+      if (currentSong) {
+        trackPlayCompletion(currentSong.id, audio.duration);
+      }
     });
 
     audio.addEventListener("error", (e) => {
@@ -69,11 +78,48 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     });
 
     return () => {
+      if (playTimer.current) {
+        clearTimeout(playTimer.current);
+      }
       audio.pause();
       audio.src = "";
       audio.remove();
     };
   }, []);
+
+  // Track when user starts playing a song
+  const trackPlayStart = async (songId: string) => {
+    try {
+      const { error } = await supabase.from("play_history").insert({
+        song_id: songId,
+        played_duration: 0,
+        completed: false
+      });
+      
+      if (error) {
+        console.error("Error tracking play start:", error);
+      }
+    } catch (error) {
+      console.error("Failed to track play start:", error);
+    }
+  };
+
+  // Track when user completes a song
+  const trackPlayCompletion = async (songId: string, duration: number) => {
+    try {
+      const { error } = await supabase.from("play_history").insert({
+        song_id: songId,
+        played_duration: Math.floor(duration),
+        completed: true
+      });
+      
+      if (error) {
+        console.error("Error tracking play completion:", error);
+      }
+    } catch (error) {
+      console.error("Failed to track play completion:", error);
+    }
+  };
 
   const play = async (song: Song) => {
     if (!audioRef.current) return;
@@ -84,11 +130,47 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         return;
       }
 
+      // If we're changing songs and were already playing something
+      if (currentSong && isPlaying) {
+        // Track how much of the previous song was played
+        const playedDuration = currentTime;
+        const completed = playedDuration >= duration * 0.9; // Consider it completed if 90% played
+        
+        trackPlayCompletion(currentSong.id, playedDuration);
+      }
+
       audioRef.current.src = song.audio_url;
       audioRef.current.volume = volume;
       await audioRef.current.play();
       setCurrentSong(song);
       setIsPlaying(true);
+      
+      // Track new song started
+      trackPlayStart(song.id);
+      
+      // Set up timer to track progress for longer plays
+      if (playTimer.current) {
+        clearTimeout(playTimer.current);
+      }
+      
+      // Track progress every 30 seconds for longer songs
+      playTimer.current = setInterval(() => {
+        if (audioRef.current && currentSong && isPlaying) {
+          const playedDuration = audioRef.current.currentTime;
+          
+          // Update play history with current progress
+          supabase.from("play_history").insert({
+            song_id: currentSong.id,
+            played_duration: Math.floor(playedDuration),
+            completed: false
+          }).then(({ error }) => {
+            if (error) {
+              console.error("Error updating play progress:", error);
+            }
+          });
+        }
+      }, 30000); // Every 30 seconds
+      
     } catch (error) {
       console.error("Playback error:", error);
       toast.error("Failed to play song");
@@ -99,6 +181,21 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     if (!audioRef.current) return;
     audioRef.current.pause();
     setIsPlaying(false);
+    
+    // When pausing, record the progress
+    if (currentSong) {
+      const playedDuration = currentTime;
+      
+      supabase.from("play_history").insert({
+        song_id: currentSong.id,
+        played_duration: Math.floor(playedDuration),
+        completed: false
+      }).then(({ error }) => {
+        if (error) {
+          console.error("Error recording pause progress:", error);
+        }
+      });
+    }
   };
 
   const resume = async () => {
@@ -124,6 +221,66 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     setVolume(newVolume);
   };
 
+  // Toggle like status for a song
+  const toggleLike = async (songId: string) => {
+    try {
+      const liked = await isLiked(songId);
+      
+      if (liked) {
+        // Unlike the song
+        const { error } = await supabase
+          .from("liked_songs")
+          .delete()
+          .eq("song_id", songId);
+          
+        if (error) {
+          console.error("Error unliking song:", error);
+          toast.error("Failed to unlike song");
+          return;
+        }
+        
+        toast.success("Removed from liked songs");
+      } else {
+        // Like the song
+        const { error } = await supabase
+          .from("liked_songs")
+          .insert({ song_id: songId });
+          
+        if (error) {
+          console.error("Error liking song:", error);
+          toast.error("Failed to like song");
+          return;
+        }
+        
+        toast.success("Added to liked songs");
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      toast.error("Failed to update liked status");
+    }
+  };
+
+  // Check if a song is liked
+  const isLiked = async (songId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from("liked_songs")
+        .select()
+        .eq("song_id", songId)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error checking like status:", error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (error) {
+      console.error("Error checking like status:", error);
+      return false;
+    }
+  };
+
   return (
     <AudioPlayerContext.Provider
       value={{
@@ -138,10 +295,11 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         resume,
         seek,
         setVolume: updateVolume,
+        toggleLike,
+        isLiked,
       }}
     >
       {children}
     </AudioPlayerContext.Provider>
   );
 };
-
