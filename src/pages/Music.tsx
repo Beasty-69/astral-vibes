@@ -7,8 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAudioPlayer } from "@/components/Player/AudioPlayer";
+import AuthButton from "@/components/auth/AuthButton";
 
-interface SpotifyTrack {
+interface DeezerTrack {
   id: string;
   name: string;
   artists: { name: string }[];
@@ -29,7 +30,7 @@ const Music = () => {
   const { play } = useAudioPlayer();
 
   const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["spotify-search", query],
+    queryKey: ["deezer-search", query],
     queryFn: async () => {
       try {
         const { data, error } = await supabase.functions.invoke("spotify/search", {
@@ -38,14 +39,14 @@ const Music = () => {
 
         if (error) {
           console.error("Search error:", error);
-          toast.error("Failed to search Spotify");
+          toast.error("Failed to search Deezer");
           return { tracks: { items: [] } };
         }
 
         return data;
       } catch (error) {
         console.error("Search error:", error);
-        toast.error("Failed to search Spotify");
+        toast.error("Failed to search Deezer");
         return { tracks: { items: [] } };
       }
     },
@@ -53,7 +54,7 @@ const Music = () => {
   });
 
   const { data: newReleases, isLoading: newReleasesLoading } = useQuery({
-    queryKey: ["spotify-new-releases"],
+    queryKey: ["deezer-new-releases"],
     queryFn: async () => {
       try {
         const { data, error } = await supabase.functions.invoke("spotify/new-releases", {
@@ -75,13 +76,13 @@ const Music = () => {
     },
   });
 
-  const handlePlayTrack = (track: SpotifyTrack) => {
+  const handlePlayTrack = (track: DeezerTrack) => {
     if (!track.preview_url) {
       toast.error("No preview available for this track");
       return;
     }
     
-    // Convert Spotify track to our app's Song format
+    // Convert Deezer track to our app's Song format
     const song = {
       id: track.id,
       title: track.name,
@@ -113,9 +114,14 @@ const Music = () => {
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-              Discover Music
-            </h1>
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+                Discover Music
+              </h1>
+              <div className="block md:hidden">
+                <AuthButton />
+              </div>
+            </div>
             <div className="relative w-full md:w-64">
               <SearchIcon
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -123,7 +129,7 @@ const Music = () => {
               />
               <input
                 type="text"
-                placeholder="Search Spotify..."
+                placeholder="Search Deezer..."
                 className="w-full h-12 pl-12 pr-4 bg-card glass rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -133,7 +139,7 @@ const Music = () => {
 
           {showFeatured && !searchLoading && (
             <div className="mb-10">
-              <h2 className="text-2xl font-bold mb-4">New Releases</h2>
+              <h2 className="text-2xl font-bold mb-4">Popular Albums</h2>
               {newReleasesLoading ? (
                 <div className="glass p-8 rounded-lg flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
@@ -178,7 +184,7 @@ const Music = () => {
                 {searchLoading ? (
                   <div className="p-8 text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-muted-foreground">Searching Spotify...</p>
+                    <p className="mt-4 text-muted-foreground">Searching Deezer...</p>
                   </div>
                 ) : searchResults?.tracks?.items?.length > 0 ? (
                   <table className="w-full">
@@ -192,7 +198,7 @@ const Music = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {searchResults.tracks.items.map((track: SpotifyTrack, index: number) => (
+                      {searchResults.tracks.items.map((track: DeezerTrack, index: number) => (
                         <tr
                           key={track.id}
                           className="hover:bg-white/5 transition-colors"
@@ -253,7 +259,7 @@ const Music = () => {
                     <p className="mt-4 text-muted-foreground">
                       {query
                         ? "No matching tracks found. Try a different search."
-                        : "Start searching for tracks on Spotify."}
+                        : "Start searching for tracks on Deezer."}
                     </p>
                   </div>
                 )}
@@ -265,7 +271,7 @@ const Music = () => {
             <div className="p-8 text-center glass rounded-lg">
               <MusicIcon size={40} className="mx-auto text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">
-                Start searching for music on Spotify
+                Start searching for music on Deezer
               </p>
             </div>
           )}
