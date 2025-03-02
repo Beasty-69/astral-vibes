@@ -1,0 +1,5 @@
+
+project_id = "voccnacfmhzarimobvcd"
+
+[functions.spotify]
+verify_jwt = false

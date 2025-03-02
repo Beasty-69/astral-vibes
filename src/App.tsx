@@ -11,6 +11,8 @@ import Library from "./pages/Library";
 import Friends from "./pages/Friends";
 import Subscription from "./pages/Subscription";
 import LikedSongs from "./pages/LikedSongs";
+import Referrals from "./pages/Referrals";
+import Music from "./pages/Music";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
               <Route path="/friends" element={<Friends />} />
               <Route path="/subscription" element={<Subscription />} />
               <Route path="/liked-songs" element={<LikedSongs />} />
+              <Route path="/referrals" element={<Referrals />} />
+              <Route path="/music" element={<Music />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
@@ -40,4 +44,3 @@ const App = () => (
 );
 
 export default App;
-
