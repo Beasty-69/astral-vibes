@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,7 +64,6 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
       setIsPlaying(false);
       setCurrentTime(0);
       
-      // Track completion when song ends
       if (currentSong) {
         trackPlayCompletion(currentSong.id, audio.duration);
       }
@@ -87,13 +85,16 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  // Track when user starts playing a song
   const trackPlayStart = async (songId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
       const { error } = await supabase.from("play_history").insert({
         song_id: songId,
         played_duration: 0,
-        completed: false
+        completed: false,
+        user_id: user.id
       });
       
       if (error) {
@@ -104,13 +105,16 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  // Track when user completes a song
   const trackPlayCompletion = async (songId: string, duration: number) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
       const { error } = await supabase.from("play_history").insert({
         song_id: songId,
         played_duration: Math.floor(duration),
-        completed: true
+        completed: true,
+        user_id: user.id
       });
       
       if (error) {
@@ -130,11 +134,9 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         return;
       }
 
-      // If we're changing songs and were already playing something
       if (currentSong && isPlaying) {
-        // Track how much of the previous song was played
         const playedDuration = currentTime;
-        const completed = playedDuration >= duration * 0.9; // Consider it completed if 90% played
+        const completed = playedDuration >= duration * 0.9;
         
         trackPlayCompletion(currentSong.id, playedDuration);
       }
@@ -145,32 +147,32 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
       setCurrentSong(song);
       setIsPlaying(true);
       
-      // Track new song started
       trackPlayStart(song.id);
       
-      // Set up timer to track progress for longer plays
       if (playTimer.current) {
         clearTimeout(playTimer.current);
       }
       
-      // Track progress every 30 seconds for longer songs
       playTimer.current = setInterval(() => {
         if (audioRef.current && currentSong && isPlaying) {
           const playedDuration = audioRef.current.currentTime;
           
-          // Update play history with current progress
-          supabase.from("play_history").insert({
-            song_id: currentSong.id,
-            played_duration: Math.floor(playedDuration),
-            completed: false
-          }).then(({ error }) => {
-            if (error) {
-              console.error("Error updating play progress:", error);
-            }
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            
+            supabase.from("play_history").insert({
+              song_id: currentSong.id,
+              played_duration: Math.floor(playedDuration),
+              completed: false,
+              user_id: user.id
+            }).then(({ error }) => {
+              if (error) {
+                console.error("Error updating play progress:", error);
+              }
+            });
           });
         }
-      }, 30000); // Every 30 seconds
-      
+      }, 30000);
     } catch (error) {
       console.error("Playback error:", error);
       toast.error("Failed to play song");
@@ -182,18 +184,22 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     audioRef.current.pause();
     setIsPlaying(false);
     
-    // When pausing, record the progress
     if (currentSong) {
       const playedDuration = currentTime;
       
-      supabase.from("play_history").insert({
-        song_id: currentSong.id,
-        played_duration: Math.floor(playedDuration),
-        completed: false
-      }).then(({ error }) => {
-        if (error) {
-          console.error("Error recording pause progress:", error);
-        }
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+        
+        supabase.from("play_history").insert({
+          song_id: currentSong.id,
+          played_duration: Math.floor(playedDuration),
+          completed: false,
+          user_id: user.id
+        }).then(({ error }) => {
+          if (error) {
+            console.error("Error recording pause progress:", error);
+          }
+        });
       });
     }
   };
@@ -221,17 +227,22 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     setVolume(newVolume);
   };
 
-  // Toggle like status for a song
   const toggleLike = async (songId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to like songs");
+        return;
+      }
+      
       const liked = await isLiked(songId);
       
       if (liked) {
-        // Unlike the song
         const { error } = await supabase
           .from("liked_songs")
           .delete()
-          .eq("song_id", songId);
+          .eq("song_id", songId)
+          .eq("user_id", user.id);
           
         if (error) {
           console.error("Error unliking song:", error);
@@ -241,10 +252,12 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         
         toast.success("Removed from liked songs");
       } else {
-        // Like the song
         const { error } = await supabase
           .from("liked_songs")
-          .insert({ song_id: songId });
+          .insert({ 
+            song_id: songId,
+            user_id: user.id
+          });
           
         if (error) {
           console.error("Error liking song:", error);
@@ -260,13 +273,16 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  // Check if a song is liked
   const isLiked = async (songId: string): Promise<boolean> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      
       const { data, error } = await supabase
         .from("liked_songs")
         .select()
         .eq("song_id", songId)
+        .eq("user_id", user.id)
         .maybeSingle();
         
       if (error) {

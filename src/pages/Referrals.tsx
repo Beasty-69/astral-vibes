@@ -1,121 +1,210 @@
 
 import { useState, useEffect } from "react";
-import { Copy, Gift, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Gift, Copy, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+
+interface ReferralCode {
+  id: string;
+  code: string;
+  created_at: string;
+  expires_at: string | null;
+  uses_left: number;
+  max_uses: number;
+}
 
 const Referrals = () => {
-  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [referralCode, setReferralCode] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [applyingCode, setApplyingCode] = useState(false);
   const [codeInput, setCodeInput] = useState("");
-  const [isLoadingCode, setIsLoadingCode] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Get user's current referral code on load
+  // Fetch user's referral codes
   useEffect(() => {
-    const fetchReferralCode = async () => {
-      setIsLoadingCode(true);
+    const fetchReferralCodes = async () => {
       try {
-        const { data, error } = await supabase
-          .from("referral_codes")
-          .select("code")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (data) {
-          setReferralCode(data.code);
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Use REST endpoint for tables that aren't in the database types yet
+          const response = await fetch(`https://voccnacfmhzarimobvcd.supabase.co/rest/v1/referral_codes?user_id=eq.${user.id}&select=*`, {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY2NuYWNmbWh6YXJpbW9idmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyMDQ3MzUsImV4cCI6MjA1NTc4MDczNX0.Bgc3clgCVJF30Ac00R0Xie8Qm14-WW652SXPAtwVu1s',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          });
+          
+          if (response.ok) {
+            const codes = await response.json();
+            setReferralCodes(codes);
+            if (codes.length > 0) {
+              setReferralCode(codes[0].code);
+            }
+          } else {
+            console.error('Failed to fetch referral codes:', response.statusText);
+          }
         }
       } catch (error) {
-        console.error("Error fetching referral code:", error);
+        console.error("Error fetching referral codes:", error);
+        toast.error("Failed to load referral codes");
       } finally {
-        setIsLoadingCode(false);
+        setLoading(false);
       }
     };
 
-    fetchReferralCode();
+    fetchReferralCodes();
   }, []);
 
+  // Function to generate a new referral code
   const generateReferralCode = async () => {
-    setIsLoadingCode(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      setGeneratingCode(true);
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!userData?.user?.id) {
-        toast.error("You need to be logged in to generate a referral code");
+      if (!user) {
+        toast.error("Please login to generate a referral code");
         return;
       }
-
-      const response = await supabase.functions.invoke("referrals", {
-        body: {
-          action: "create",
-          userId: userData.user.id
-        }
+      
+      const response = await fetch('https://voccnacfmhzarimobvcd.functions.supabase.co/referrals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'create',
+          userId: user.id
+        })
       });
-
-      if (response.error) {
-        throw new Error(response.error.message);
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
       }
-
-      setReferralCode(response.data.code);
-      toast.success("New referral code generated!");
+      
+      const result = await response.json();
+      
+      if (result.success && result.code) {
+        setReferralCode(result.code);
+        // Refresh referral codes list
+        const newCodesResponse = await fetch(`https://voccnacfmhzarimobvcd.supabase.co/rest/v1/referral_codes?user_id=eq.${user.id}&select=*`, {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY2NuYWNmbWh6YXJpbW9idmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyMDQ3MzUsImV4cCI6MjA1NTc4MDczNX0.Bgc3clgCVJF30Ac00R0Xie8Qm14-WW652SXPAtwVu1s',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
+        });
+        
+        if (newCodesResponse.ok) {
+          const codes = await newCodesResponse.json();
+          setReferralCodes(codes);
+        }
+        
+        toast.success("Referral code generated successfully");
+      } else {
+        toast.error(result.error || "Failed to generate referral code");
+      }
     } catch (error) {
       console.error("Error generating referral code:", error);
       toast.error("Failed to generate referral code");
     } finally {
-      setIsLoadingCode(false);
+      setGeneratingCode(false);
     }
   };
 
-  const copyReferralCode = () => {
-    if (referralCode) {
-      navigator.clipboard.writeText(referralCode);
-      toast.success("Referral code copied to clipboard!");
-    }
+  // Function to copy referral code to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(referralCode).then(
+      () => {
+        setCopied(true);
+        toast.success("Copied to clipboard");
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => {
+        toast.error("Failed to copy to clipboard");
+      }
+    );
   };
 
-  const verifyReferralCode = async () => {
+  // Function to apply a referral code
+  const applyReferralCode = async () => {
     if (!codeInput) {
       toast.error("Please enter a referral code");
       return;
     }
-
-    setIsVerifying(true);
+    
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      setApplyingCode(true);
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!userData?.user?.id) {
-        toast.error("You need to be logged in to use a referral code");
+      if (!user) {
+        toast.error("Please login to use a referral code");
         return;
       }
-
-      const response = await supabase.functions.invoke("referrals", {
-        body: {
-          action: "use",
-          code: codeInput,
-          userId: userData.user.id
-        }
+      
+      // First verify the code
+      const verifyResponse = await fetch('https://voccnacfmhzarimobvcd.functions.supabase.co/referrals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'verify',
+          code: codeInput
+        })
       });
-
-      if (response.error) {
-        toast.error(response.error.message || "Invalid referral code");
+      
+      if (!verifyResponse.ok) {
+        throw new Error(`Error: ${verifyResponse.status}`);
+      }
+      
+      const verifyResult = await verifyResponse.json();
+      
+      if (!verifyResult.valid) {
+        toast.error(verifyResult.error || "Invalid or expired referral code");
         return;
       }
-
-      toast.success("Referral code applied successfully!");
-      setCodeInput("");
-      setIsDialogOpen(false);
-    } catch (error: any) {
-      console.error("Error verifying referral code:", error);
-      toast.error(error.message || "Failed to verify referral code");
+      
+      // Now use the code
+      const useResponse = await fetch('https://voccnacfmhzarimobvcd.functions.supabase.co/referrals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          action: 'use',
+          code: codeInput,
+          userId: user.id
+        })
+      });
+      
+      if (!useResponse.ok) {
+        throw new Error(`Error: ${useResponse.status}`);
+      }
+      
+      const useResult = await useResponse.json();
+      
+      if (useResult.success) {
+        toast.success(useResult.message || "Referral code applied successfully");
+        setCodeInput("");
+      } else {
+        toast.error(useResult.error || "Failed to apply referral code");
+      }
+    } catch (error) {
+      console.error("Error applying referral code:", error);
+      toast.error("Failed to apply referral code");
     } finally {
-      setIsVerifying(false);
+      setApplyingCode(false);
     }
   };
 
@@ -123,149 +212,152 @@ const Referrals = () => {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8">Referrals</h1>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center mb-8">
+            <Gift className="w-12 h-12 mr-4 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Referrals</h1>
+              <p className="text-muted-foreground">
+                Share Nebula with friends and get rewards
+              </p>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Your referral code */}
             <Card>
               <CardHeader>
                 <CardTitle>Your Referral Code</CardTitle>
                 <CardDescription>
-                  Share your code with friends to earn rewards
+                  Share this code with friends to give them 7 days of premium
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {referralCode ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center">
-                      <div className="bg-card p-3 rounded-l-md border border-r-0 border-white/10 flex-1">
-                        <span className="font-mono text-xl">{referralCode}</span>
-                      </div>
-                      <button
-                        className="p-3 bg-primary text-primary-foreground rounded-r-md border border-primary hover:bg-primary/90 transition-colors"
-                        onClick={copyReferralCode}
-                      >
-                        <Copy size={20} />
-                      </button>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={generateReferralCode}
-                      disabled={isLoadingCode}
+                {loading ? (
+                  <div className="flex justify-center p-4">
+                    <Loader2 className="animate-spin text-primary h-8 w-8" />
+                  </div>
+                ) : referralCode ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={referralCode}
+                      readOnly
+                      className="font-mono text-lg tracking-wider"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyToClipboard}
+                      className="flex-shrink-0"
                     >
-                      {isLoadingCode ? (
-                        <>
-                          <RefreshCw size={16} className="mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw size={16} className="mr-2" />
-                          Generate New Code
-                        </>
-                      )}
+                      {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-center py-4">
-                    <Button onClick={generateReferralCode} disabled={isLoadingCode}>
-                      {isLoadingCode ? (
-                        <>
-                          <RefreshCw size={16} className="mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Gift size={16} className="mr-2" />
-                          Generate Referral Code
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={generateReferralCode}
+                    disabled={generatingCode}
+                    className="w-full"
+                  >
+                    {generatingCode ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate Referral Code"
+                    )}
+                  </Button>
                 )}
               </CardContent>
+              {referralCodes.length > 0 && (
+                <CardFooter className="flex flex-col items-start">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Uses remaining: {referralCodes[0]?.uses_left} / {referralCodes[0]?.max_uses}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Expires: {referralCodes[0]?.expires_at
+                      ? new Date(referralCodes[0].expires_at).toLocaleDateString()
+                      : "Never"}
+                  </p>
+                </CardFooter>
+              )}
             </Card>
 
+            {/* Apply a referral code */}
             <Card>
               <CardHeader>
-                <CardTitle>Use a Referral Code</CardTitle>
+                <CardTitle>Apply Referral Code</CardTitle>
                 <CardDescription>
-                  Enter a friend's code to get benefits
+                  Enter a friend's code to get 7 days of premium
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">
-                      <Gift size={16} className="mr-2" />
-                      Enter Referral Code
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Enter Referral Code</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-4">
-                      <Input
-                        placeholder="Enter code (e.g. ABC-123-XYZ)"
-                        value={codeInput}
-                        onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                      />
-                      <Button 
-                        onClick={verifyReferralCode} 
-                        className="w-full"
-                        disabled={isVerifying}
-                      >
-                        {isVerifying ? (
-                          <>
-                            <RefreshCw size={16} className="mr-2 animate-spin" />
-                            Verifying...
-                          </>
-                        ) : (
-                          "Apply Code"
-                        )}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <div className="mt-6 space-y-4">
-                  <h3 className="font-medium">Referral Benefits:</h3>
-                  <ul className="space-y-2">
-                    <li className="flex items-center">
-                      <CheckCircle size={16} className="mr-2 text-green-400" />
-                      Premium features for 7 days
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle size={16} className="mr-2 text-green-400" />
-                      Unlimited song downloads
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle size={16} className="mr-2 text-green-400" />
-                      Access to exclusive content
-                    </li>
-                  </ul>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter code (e.g. ABC-123-XYZ)"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    className="font-mono"
+                  />
+                  <Button
+                    onClick={applyReferralCode}
+                    disabled={applyingCode || !codeInput}
+                    className="flex-shrink-0"
+                  >
+                    {applyingCode ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
+                  </Button>
                 </div>
               </CardContent>
+              <CardFooter>
+                <p className="text-sm text-muted-foreground">
+                  You can only use one referral code per account
+                </p>
+              </CardFooter>
             </Card>
           </div>
 
-          <div className="mt-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>How Referrals Work</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-4 list-decimal pl-5">
-                  <li>Generate your unique referral code</li>
-                  <li>Share your code with friends</li>
-                  <li>When they sign up using your code, both of you get rewards</li>
-                  <li>Each code can be used up to 10 times</li>
-                </ol>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Rewards explanation */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>How It Works</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-card/50">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                    <Gift className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-1">1. Share Your Code</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Give your unique referral code to friends and family
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-card/50">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                    <Gift className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-1">2. Friends Sign Up</h3>
+                  <p className="text-sm text-muted-foreground">
+                    They create an account and apply your referral code
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-card/50">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                    <Gift className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-medium mb-1">3. Both Get Rewarded</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You both receive 7 days of Nebula Premium
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
       <MiniPlayer />

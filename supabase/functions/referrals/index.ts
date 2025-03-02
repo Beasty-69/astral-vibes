@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.1";
 
@@ -36,6 +35,34 @@ serve(async (req) => {
     if (action === "create" && userId) {
       const generatedCode = generateReferralCode();
       
+      // First check if user already has a code
+      const { data: existingCodes, error: checkError } = await supabase
+        .from("referral_codes")
+        .select("*")
+        .eq("user_id", userId);
+      
+      if (checkError) {
+        console.error("Error checking existing referral codes:", checkError);
+        return new Response(
+          JSON.stringify({ error: "Failed to check existing referral codes" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      
+      // If user already has a code that's still valid, return it
+      const validExistingCode = existingCodes?.find(code => 
+        (code.expires_at === null || new Date(code.expires_at) > new Date()) && 
+        code.uses_left > 0
+      );
+      
+      if (validExistingCode) {
+        return new Response(
+          JSON.stringify({ success: true, code: validExistingCode.code }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Otherwise create a new code
       const { data, error } = await supabase
         .from("referral_codes")
         .insert({
@@ -159,9 +186,6 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );
       }
-      
-      // 3. Apply benefits - for example, add premium days to the referrer's subscription
-      // This would depend on your specific rewards system
       
       return new Response(
         JSON.stringify({ 
