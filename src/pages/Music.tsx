@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { Search, Play, Disc } from "lucide-react";
+import { Search, Play } from "lucide-react";
+import { Disc } from "lucide-react";
 import { toast } from "sonner";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
@@ -192,7 +193,9 @@ const Music = () => {
             <h2 className="text-xl font-semibold mb-4">New Releases</h2>
             {loading ? (
               <div className="flex justify-center p-12">
-                <Disc className="animate-spin h-12 w-12 text-primary" />
+                <span className="animate-spin h-12 w-12 text-primary">
+                  <Disc size={48} />
+                </span>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
