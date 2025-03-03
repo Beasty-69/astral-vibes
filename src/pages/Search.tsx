@@ -1,27 +1,62 @@
 import { useState } from "react";
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, PlayCircle } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
-import BackButton from "@/components/ui/back-button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAudioPlayer } from "@/components/Player/AudioPlayer";
 
 const Search = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { play } = useAudioPlayer();
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    
-    setIsSearching(true);
-    // Simulate search delay
-    setTimeout(() => {
-      setSearchResults([
-        { id: 1, title: "Song 1", artist: "Artist 1" },
-        { id: 2, title: "Song 2", artist: "Artist 2" },
-        { id: 3, title: "Song 3", artist: "Artist 3" },
-      ]);
-      setIsSearching(false);
-    }, 1000);
+  const categories = [
+    { id: 1, name: "Hip Hop", color: "from-purple-500 to-pink-500" },
+    { id: 2, name: "Rock", color: "from-red-500 to-orange-500" },
+    { id: 3, name: "Jazz", color: "from-blue-500 to-teal-500" },
+    { id: 4, name: "Electronic", color: "from-green-500 to-emerald-500" },
+    { id: 5, name: "Classical", color: "from-yellow-500 to-amber-500" },
+    { id: 6, name: "R&B", color: "from-pink-500 to-rose-500" },
+  ];
+
+  const { data: searchResults, isLoading } = useQuery({
+    queryKey: ["search", query, selectedCategory],
+    queryFn: async () => {
+      try {
+        let query_builder = supabase.from("songs").select("*");
+
+        if (query) {
+          query_builder = query_builder.or(
+            `title.ilike.%${query}%,artist.ilike.%${query}%`
+          );
+        }
+
+        if (selectedCategory) {
+          query_builder = query_builder.eq("genre", selectedCategory);
+        }
+
+        const { data, error } = await query_builder.limit(20);
+
+        if (error) {
+          console.error("Search error:", error);
+          toast.error("Failed to search songs");
+          return [];
+        }
+
+        return data || [];
+      } catch (error) {
+        console.error("Search error:", error);
+        toast.error("Failed to search songs");
+        return [];
+      }
+    },
+    enabled: query.length > 0 || selectedCategory !== null,
+  });
+
+  const handlePlaySong = (song: any) => {
+    play(song);
   };
 
   return (
@@ -29,86 +64,115 @@ const Search = () => {
       <Sidebar />
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 mb-8">
-            <BackButton />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-              Search
-            </h1>
+          <div className="relative mb-8">
+            <SearchIcon
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder="What do you want to listen to?"
+              className="w-full h-12 pl-12 pr-4 bg-card glass rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          
-          <div className="glass p-6 rounded-lg mb-8">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search for songs, artists, or albums..."
-                  className="w-full h-10 pl-10 pr-4 bg-card glass rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              <button
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-                onClick={handleSearch}
-                disabled={isSearching || !searchQuery.trim()}
-              >
-                {isSearching ? "Searching..." : "Search"}
-              </button>
-            </div>
 
-            {searchResults.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">Search Results</h2>
-                <div className="space-y-2">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.id}
-                      className="p-4 glass rounded-lg hover:bg-card/60 transition-colors"
-                    >
-                      <h3 className="font-medium">{result.title}</h3>
-                      <p className="text-sm text-muted-foreground">{result.artist}</p>
-                    </div>
-                  ))}
+          <h2 className="text-2xl font-bold mb-6">Browse All</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            {categories.map((category) => (
+              <div
+                key={category.id}
+                className={`aspect-square rounded-lg overflow-hidden card-hover cursor-pointer transition-transform 
+                  ${
+                    selectedCategory === category.name
+                      ? "ring-2 ring-primary scale-[0.98]"
+                      : ""
+                  }`}
+                onClick={() =>
+                  setSelectedCategory(
+                    selectedCategory === category.name ? null : category.name
+                  )
+                }
+              >
+                <div
+                  className={`w-full h-full bg-gradient-to-br ${category.color} p-4 flex items-end`}
+                >
+                  <h3 className="text-lg font-bold">{category.name}</h3>
                 </div>
               </div>
-            )}
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="p-4 glass rounded-lg">
-              <h3 className="font-medium mb-2">Top Genres</h3>
-              <div className="flex flex-wrap gap-2">
-                {["Pop", "Rock", "Hip Hop", "Electronic", "Jazz", "Classical"].map((genre) => (
-                  <span
-                    key={genre}
-                    className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
-                  >
-                    {genre}
-                  </span>
-                ))}
+          {(query || selectedCategory) && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">
+                {isLoading
+                  ? "Searching..."
+                  : `Search Results (${searchResults?.length || 0})`}
+              </h3>
+              <div className="glass rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="border-b border-white/10">
+                    <tr>
+                      <th className="text-left p-4">#</th>
+                      <th className="text-left p-4">Title</th>
+                      <th className="text-left p-4 hidden md:table-cell">
+                        Artist
+                      </th>
+                      <th className="text-left p-4 hidden md:table-cell">
+                        Album
+                      </th>
+                      <th className="text-right p-4">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {searchResults?.map((song, index) => (
+                      <tr
+                        key={song.id}
+                        className="hover:bg-white/5 transition-colors group cursor-pointer"
+                        onClick={() => handlePlaySong(song)}
+                      >
+                        <td className="p-4 w-12">
+                          <div className="flex items-center">
+                            <span className="group-hover:hidden">{index + 1}</span>
+                            <PlayCircle
+                              size={16}
+                              className="hidden group-hover:block text-primary"
+                            />
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            {song.cover_url && (
+                              <img
+                                src={song.cover_url}
+                                alt={song.title}
+                                className="w-10 h-10 rounded object-cover"
+                              />
+                            )}
+                            <div>
+                              <div className="font-medium">{song.title}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 hidden md:table-cell text-muted-foreground">
+                          {song.artist}
+                        </td>
+                        <td className="p-4 hidden md:table-cell text-muted-foreground">
+                          {song.album}
+                        </td>
+                        <td className="p-4 text-right text-muted-foreground">
+                          {Math.floor(song.duration / 60)}:
+                          {(song.duration % 60).toString().padStart(2, "0")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            
-            <div className="p-4 glass rounded-lg">
-              <h3 className="font-medium mb-2">Trending</h3>
-              <ul className="space-y-2">
-                {["Trending Song 1", "Trending Song 2", "Trending Song 3"].map((song, index) => (
-                  <li key={index} className="text-sm">{song}</li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="p-4 glass rounded-lg">
-              <h3 className="font-medium mb-2">New Releases</h3>
-              <ul className="space-y-2">
-                {["New Release 1", "New Release 2", "New Release 3"].map((release, index) => (
-                  <li key={index} className="text-sm">{release}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          )}
         </div>
       </main>
       <MiniPlayer />

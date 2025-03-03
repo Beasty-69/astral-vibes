@@ -1,116 +1,150 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
+import { encode as base64Encode } from 'https://deno.land/std@0.177.0/encoding/base64.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-async function fetchFromDeezer(endpoint: string, params: Record<string, string> = {}) {
-  // Build query string from params
-  const queryString = Object.keys(params)
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-    .join('&');
-  
-  const url = `https://api.deezer.com/${endpoint}${queryString ? `?${queryString}` : ''}`;
-  
-  console.log(`Fetching from Deezer: ${url}`);
-  
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Deezer API error: ${response.status} ${errorText}`);
-    throw new Error(`Deezer API error: ${response.status}`);
-  }
-  
-  return response.json();
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
-  
+
   try {
-    const url = new URL(req.url);
-    const path = url.pathname.split('/').pop();
-    const requestData = await req.json();
+    const url = new URL(req.url)
+    const endpoint = url.pathname.split('/').pop()
     
-    if (path === 'search') {
-      const { query } = requestData;
+    const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID')
+    const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET')
+    
+    if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
+      return new Response(
+        JSON.stringify({ error: 'Spotify API credentials not configured' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Get access token from Spotify
+    async function getSpotifyAccessToken() {
+      const credentials = `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
+      const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${base64Encode(credentials)}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      })
+
+      const data = await response.json()
+      return data.access_token
+    }
+
+    // Common function to call Spotify API
+    async function callSpotifyApi(apiUrl: string, accessToken: string) {
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      })
+      
+      if (!response.ok) {
+        console.error('Spotify API error:', await response.text())
+        throw new Error(`Spotify API error: ${response.status}`)
+      }
+      
+      return await response.json()
+    }
+
+    // Get request body
+    const requestData = await req.json()
+    const accessToken = await getSpotifyAccessToken()
+
+    let result: any
+
+    // Handle different API endpoints
+    if (endpoint === 'search') {
+      const { query, type = 'track,artist,album', limit = 20 } = requestData
+      
       if (!query) {
         return new Response(
           JSON.stringify({ error: 'Query parameter is required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
       }
       
-      const data = await fetchFromDeezer('search', { q: query });
+      const encodedQuery = encodeURIComponent(query)
+      const encodedType = encodeURIComponent(type)
+      const apiUrl = `https://api.spotify.com/v1/search?q=${encodedQuery}&type=${encodedType}&limit=${limit}`
       
-      // Transform response to match the Spotify format our frontend expects
-      const transformedData = {
-        tracks: {
-          items: data.data.map((track: any) => ({
-            id: track.id.toString(),
-            name: track.title,
-            artists: [{ name: track.artist.name }],
-            album: {
-              name: track.album.title,
-              images: [{ url: track.album.cover_big || track.album.cover_medium || track.album.cover_small }]
-            },
-            duration_ms: track.duration * 1000,
-            external_urls: {
-              spotify: track.link  // Deezer link
-            },
-            preview_url: track.preview
-          }))
-        }
-      };
+      result = await callSpotifyApi(apiUrl, accessToken)
+    } 
+    else if (endpoint === 'recommendations') {
+      const { seed_artists = '', seed_tracks = '', seed_genres = 'pop', limit = 20 } = requestData
       
-      return new Response(
-        JSON.stringify(transformedData),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      const apiUrl = `https://api.spotify.com/v1/recommendations?seed_artists=${seed_artists}&seed_tracks=${seed_tracks}&seed_genres=${seed_genres}&limit=${limit}`
+      
+      result = await callSpotifyApi(apiUrl, accessToken)
     }
-    
-    if (path === 'new-releases') {
-      // Deezer doesn't have a direct "new releases" endpoint, so we'll use the chart endpoint
-      const data = await fetchFromDeezer('chart');
+    else if (endpoint === 'new-releases') {
+      const { country = 'US', limit = 20 } = requestData
       
-      // Transform response to match the Spotify format our frontend expects
-      const transformedData = {
-        albums: {
-          items: data.albums.data.map((album: any) => ({
-            id: album.id.toString(),
-            name: album.title,
-            artists: [{ name: album.artist.name }],
-            images: [{ url: album.cover_big || album.cover_medium || album.cover_small }],
-            external_urls: {
-              spotify: album.link  // Deezer link
-            }
-          }))
-        }
-      };
+      const apiUrl = `https://api.spotify.com/v1/browse/new-releases?country=${country}&limit=${limit}`
       
-      return new Response(
-        JSON.stringify(transformedData),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      result = await callSpotifyApi(apiUrl, accessToken)
     }
-    
+    else if (endpoint === 'track') {
+      const { id } = requestData
+      
+      if (!id) {
+        return new Response(
+          JSON.stringify({ error: 'Track ID is required' }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+      
+      const apiUrl = `https://api.spotify.com/v1/tracks/${id}`
+      
+      result = await callSpotifyApi(apiUrl, accessToken)
+    }
+    else {
+      return new Response(
+        JSON.stringify({ error: 'Invalid endpoint' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid endpoint' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-    
+      JSON.stringify(result),
+      { 
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   } catch (error) {
-    console.error('Error in Deezer function:', error);
+    console.error('Error processing request:', error)
     
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   }
-});
+})

@@ -9,7 +9,6 @@ import FriendsList from "@/components/friends/FriendsList";
 import ChatWindow from "@/components/friends/ChatWindow";
 import FriendSuggestions from "@/components/friends/FriendSuggestions";
 import { Friend, Message } from "@/types/friends";
-import BackButton from "@/components/ui/back-button";
 
 const Friends = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -182,12 +181,9 @@ const Friends = () => {
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-2">
-              <BackButton />
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-                Friends
-              </h1>
-            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              Friends
+            </h1>
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <input
