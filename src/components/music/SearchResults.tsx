@@ -19,7 +19,7 @@ const SearchResults = ({ tracks, handlePlayTrack }: SearchResultsProps) => {
     <div className="mt-8 animate-fade-in">
       <h2 className="text-xl font-semibold mb-4">Search Results</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {tracks.slice(0, 8).map((track, index) => (
+        {tracks.map((track, index) => (
           <div 
             key={track.id}
             className={cn(

@@ -8,7 +8,10 @@ import BackButton from "@/components/ui/back-button";
 import SearchForm from "@/components/music/SearchForm";
 import SearchResults from "@/components/music/SearchResults";
 import NewReleases from "@/components/music/NewReleases";
+import PaginationControls from "@/components/ui/pagination-controls";
 import { Track } from "@/types/music";
+
+const ITEMS_PER_PAGE = 8;
 
 const Music = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,6 +19,8 @@ const Music = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [newReleases, setNewReleases] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
   useEffect(() => {
     // Fetch new releases when the component mounts
@@ -49,10 +54,13 @@ const Music = () => {
     
     try {
       setIsSearching(true);
+      setCurrentPage(1); // Reset to first page on new search
+      
       const { data, error } = await supabase.functions.invoke("deezer", {
         body: {
           action: "search",
-          query: searchQuery
+          query: searchQuery,
+          limit: 50 // Request more results to enable pagination
         }
       });
 
@@ -60,6 +68,7 @@ const Music = () => {
       
       if (data && Array.isArray(data.data)) {
         setTracks(data.data);
+        setTotalResults(data.data.length);
       }
     } catch (error) {
       console.error('Error searching tracks:', error);
@@ -68,6 +77,21 @@ const Music = () => {
       setIsSearching(false);
     }
   };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of results when changing pages
+    const resultsElement = document.getElementById('search-results');
+    if (resultsElement) {
+      resultsElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedTracks = tracks.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const showPagination = tracks.length > ITEMS_PER_PAGE;
 
   const handlePlayTrack = async (track: Track) => {
     try {
@@ -140,10 +164,21 @@ const Music = () => {
               isSearching={isSearching}
             />
 
-            <SearchResults 
-              tracks={tracks} 
-              handlePlayTrack={handlePlayTrack} 
-            />
+            <div id="search-results">
+              <SearchResults 
+                tracks={paginatedTracks} 
+                handlePlayTrack={handlePlayTrack} 
+              />
+              
+              {showPagination && tracks.length > 0 && (
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  className="mt-6"
+                />
+              )}
+            </div>
           </div>
 
           <NewReleases 
