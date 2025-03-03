@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/sidebar/Sidebar";
@@ -53,6 +54,26 @@ const Index = () => {
             <h2 className="text-2xl font-bold mb-4">Discover More Music</h2>
             <p className="mb-4">Explore millions of tracks on Deezer through our music discovery page.</p>
             <Button onClick={() => navigate('/music')}>Browse Music</Button>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 glass rounded-lg">
+              <h2 className="text-2xl font-bold mb-4">Connect with Friends</h2>
+              <p className="mb-4">Chat with friends and listen to music together.</p>
+              <Button onClick={() => navigate('/friends')}>Friends</Button>
+            </div>
+            
+            <div className="p-6 glass rounded-lg">
+              <h2 className="text-2xl font-bold mb-4">Invite Friends</h2>
+              <p className="mb-4">Share referral codes and earn rewards when friends join.</p>
+              <Button onClick={() => navigate('/referrals')}>Get Referral Code</Button>
+            </div>
+          </div>
+
+          <div className="mt-8 p-6 glass rounded-lg">
+            <h2 className="text-2xl font-bold mb-4">Upgrade Your Experience</h2>
+            <p className="mb-4">Get premium features and enjoy ad-free music.</p>
+            <Button onClick={() => navigate('/subscription')}>View Plans</Button>
           </div>
         </div>
       </main>

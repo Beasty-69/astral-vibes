@@ -2,6 +2,7 @@
 import { Check } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
+import BackButton from "@/components/ui/back-button";
 
 const Subscription = () => {
   const plans = [
@@ -50,14 +51,15 @@ const Subscription = () => {
       <Sidebar />
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 animate-fade-in">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2 mb-4 animate-fade-in">
+            <BackButton />
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
               Choose Your Plan
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Unlock the full potential of your music experience
-            </p>
           </div>
+          <p className="text-lg text-muted-foreground mb-8">
+            Unlock the full potential of your music experience
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((plan, index) => (

@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Heart, Search as SearchIcon, Clock, PlayCircle } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
+import BackButton from "@/components/ui/back-button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,7 +16,6 @@ const LikedSongs = () => {
     queryKey: ["likedSongs", searchQuery],
     queryFn: async () => {
       try {
-        // Fetch the liked songs with a join to the songs table
         const { data, error } = await supabase
           .from("liked_songs")
           .select(`
@@ -40,7 +39,6 @@ const LikedSongs = () => {
           return [];
         }
 
-        // Filter by search query if provided
         let filteredData = data;
         if (searchQuery) {
           const lowerQuery = searchQuery.toLowerCase();
@@ -85,19 +83,11 @@ const LikedSongs = () => {
       <Sidebar />
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end gap-8 mb-8">
-            <div className="flex-shrink-0 w-48 h-48 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 glass p-6 flex items-center justify-center">
-              <Heart className="w-24 h-24 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">PLAYLIST</h4>
-              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-                Liked Songs
-              </h1>
-              <p className="text-muted-foreground">
-                {likedSongs?.length || 0} songs
-              </p>
-            </div>
+          <div className="flex items-center gap-2 mb-8">
+            <BackButton />
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              Liked Songs
+            </h1>
           </div>
 
           <div className="mb-6">

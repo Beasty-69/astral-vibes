@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import BackButton from "@/components/ui/back-button";
 
 interface ReferralCode {
   id: string;
@@ -214,6 +215,7 @@ const Referrals = () => {
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center mb-8">
+            <BackButton className="mr-2" />
             <Gift className="w-12 h-12 mr-4 text-primary" />
             <div>
               <h1 className="text-3xl font-bold">Referrals</h1>
