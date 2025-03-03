@@ -1,20 +1,20 @@
 
 import { useState, useEffect } from "react";
-import { Search, Play } from "lucide-react";
-import { Disc } from "lucide-react";
 import { toast } from "sonner";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import BackButton from "@/components/ui/back-button";
+import SearchForm from "@/components/music/SearchForm";
+import SearchResults from "@/components/music/SearchResults";
+import NewReleases from "@/components/music/NewReleases";
+import { Track } from "@/types/music";
 
 const Music = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [tracks, setTracks] = useState([]);
-  const [newReleases, setNewReleases] = useState([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [newReleases, setNewReleases] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ const Music = () => {
     }
   };
 
-  const handlePlayTrack = async (track) => {
+  const handlePlayTrack = async (track: Track) => {
     try {
       // First check if the track already exists in our database
       const { data: existingTracks, error: fetchError } = await supabase
@@ -106,10 +106,9 @@ const Music = () => {
       }
       
       // Now play the track
-      // This is a simplified version - in a real app, you'd update the audio player state
       toast.success(`Playing: ${track.title}`);
       
-      // Example: dispatch event to audio player
+      // Dispatch event to audio player
       const event = new CustomEvent('play-track', { 
         detail: { id: songId }
       });
@@ -134,99 +133,24 @@ const Music = () => {
           </div>
 
           <div className="glass p-6 rounded-lg mb-8">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-                <Input
-                  type="text"
-                  placeholder="Search for songs, artists or albums..."
-                  className="pl-10 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              <Button 
-                onClick={handleSearch} 
-                disabled={isSearching || !searchQuery.trim()}
-                className="w-full md:w-auto"
-              >
-                {isSearching ? "Searching..." : "Search"}
-              </Button>
-            </div>
+            <SearchForm 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              handleSearch={handleSearch}
+              isSearching={isSearching}
+            />
 
-            {tracks.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">Search Results</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {tracks.slice(0, 8).map((track) => (
-                    <div 
-                      key={track.id}
-                      className="glass p-4 rounded-lg hover:bg-card/60 transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="aspect-square overflow-hidden rounded-md mb-4">
-                        <img 
-                          src={track.album.cover_medium || '/placeholder.svg'} 
-                          alt={track.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <h3 className="font-semibold truncate">{track.title}</h3>
-                      <p className="text-sm text-muted-foreground truncate">{track.artist.name}</p>
-                      <div className="mt-2 flex justify-center">
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => handlePlayTrack(track)}
-                        >
-                          <Play size={18} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SearchResults 
+              tracks={tracks} 
+              handlePlayTrack={handlePlayTrack} 
+            />
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">New Releases</h2>
-            {loading ? (
-              <div className="flex justify-center p-12">
-                <span className="animate-spin h-12 w-12 text-primary">
-                  <Disc size={48} />
-                </span>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {newReleases.slice(0, 8).map((track) => (
-                  <div 
-                    key={track.id}
-                    className="glass p-4 rounded-lg hover:bg-card/60 transition-all duration-300 hover:scale-105"
-                  >
-                    <div className="aspect-square overflow-hidden rounded-md mb-4">
-                      <img 
-                        src={track.album.cover_medium || '/placeholder.svg'} 
-                        alt={track.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h3 className="font-semibold truncate">{track.title}</h3>
-                    <p className="text-sm text-muted-foreground truncate">{track.artist.name}</p>
-                    <div className="mt-2 flex justify-center">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => handlePlayTrack(track)}
-                      >
-                        <Play size={18} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <NewReleases 
+            newReleases={newReleases}
+            loading={loading}
+            handlePlayTrack={handlePlayTrack}
+          />
         </div>
       </main>
       <MiniPlayer />
