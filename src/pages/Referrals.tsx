@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Gift, Copy, Check, Loader2 } from "lucide-react";
+import { Gift, Share, Check, Loader2, Users, Award, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import CopyToClipboardButton from "@/components/CopyToClipboardButton";
 
 interface ReferralCode {
   id: string;
@@ -18,14 +19,38 @@ interface ReferralCode {
   max_uses: number;
 }
 
+interface ReferralHistory {
+  id: string;
+  friend_name: string;
+  date: string;
+  reward: string;
+}
+
+// Sample referral history for UI demo
+const sampleReferralHistory: ReferralHistory[] = [
+  {
+    id: "1",
+    friend_name: "Alex Johnson",
+    date: "2023-10-15",
+    reward: "7 days premium"
+  },
+  {
+    id: "2",
+    friend_name: "Sam Williams",
+    date: "2023-09-30",
+    reward: "7 days premium"
+  }
+];
+
 const Referrals = () => {
   const [loading, setLoading] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
   const [referralCode, setReferralCode] = useState("");
-  const [copied, setCopied] = useState(false);
   const [applyingCode, setApplyingCode] = useState(false);
   const [codeInput, setCodeInput] = useState("");
+  const [referralHistory, setReferralHistory] = useState<ReferralHistory[]>(sampleReferralHistory);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // Fetch user's referral codes
   useEffect(() => {
@@ -120,13 +145,32 @@ const Referrals = () => {
     }
   };
 
+  // Function to share referral code
+  const shareReferralCode = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join me on Nebula Music',
+          text: `Use my referral code ${referralCode} to get 7 days of Nebula Premium!`,
+          url: window.location.origin,
+        });
+        toast.success("Shared successfully!");
+      } catch (error) {
+        console.error("Error sharing:", error);
+        copyToClipboard();
+      }
+    } else {
+      copyToClipboard();
+    }
+  };
+
   // Function to copy referral code to clipboard
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(referralCode).then(
+    const textToCopy = `Join me on Nebula Music! Use my referral code ${referralCode} to get 7 days of premium.`;
+    
+    navigator.clipboard.writeText(textToCopy).then(
       () => {
-        setCopied(true);
-        toast.success("Copied to clipboard");
-        setTimeout(() => setCopied(false), 2000);
+        toast.success("Invitation copied to clipboard");
       },
       () => {
         toast.error("Failed to copy to clipboard");
@@ -197,6 +241,17 @@ const Referrals = () => {
       if (useResult.success) {
         toast.success(useResult.message || "Referral code applied successfully");
         setCodeInput("");
+        
+        // Add to referral history (for UI demo)
+        setReferralHistory(prev => [
+          {
+            id: Date.now().toString(),
+            friend_name: "New Friend",
+            date: new Date().toISOString().split('T')[0],
+            reward: "7 days premium"
+          },
+          ...prev
+        ]);
       } else {
         toast.error(useResult.error || "Failed to apply referral code");
       }
@@ -214,9 +269,9 @@ const Referrals = () => {
       <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center mb-8">
-            <Gift className="w-12 h-12 mr-4 text-primary" />
+            <Gift className="w-10 h-10 mr-4 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Referrals</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Referrals</h1>
               <p className="text-muted-foreground">
                 Share Nebula with friends and get rewards
               </p>
@@ -225,11 +280,11 @@ const Referrals = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Your referral code */}
-            <Card>
+            <Card className="md:col-span-2 bg-gradient-to-br from-purple-900/30 to-primary/10 glass border-primary/20">
               <CardHeader>
-                <CardTitle>Your Referral Code</CardTitle>
+                <CardTitle className="text-xl md:text-2xl">Your Referral Code</CardTitle>
                 <CardDescription>
-                  Share this code with friends to give them 7 days of premium
+                  Share this code with friends to give them 7 days of premium access
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -238,19 +293,26 @@ const Referrals = () => {
                     <Loader2 className="animate-spin text-primary h-8 w-8" />
                   </div>
                 ) : referralCode ? (
-                  <div className="flex gap-2">
-                    <Input
-                      value={referralCode}
-                      readOnly
-                      className="font-mono text-lg tracking-wider"
-                    />
+                  <div className="flex flex-col md:flex-row gap-2">
+                    <div className="relative flex-grow">
+                      <Input
+                        value={referralCode}
+                        readOnly
+                        className="font-mono text-lg tracking-wider pr-10 bg-card/50"
+                      />
+                      <CopyToClipboardButton
+                        text={referralCode}
+                        variant="ghost"
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        successMessage="Code copied to clipboard!"
+                      />
+                    </div>
                     <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={copyToClipboard}
-                      className="flex-shrink-0"
+                      className="gap-2 mt-2 md:mt-0"
+                      onClick={shareReferralCode}
                     >
-                      {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                      <Share size={16} />
+                      <span>Share</span>
                     </Button>
                   </div>
                 ) : (
@@ -271,11 +333,11 @@ const Referrals = () => {
                 )}
               </CardContent>
               {referralCodes.length > 0 && (
-                <CardFooter className="flex flex-col items-start">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Uses remaining: {referralCodes[0]?.uses_left} / {referralCodes[0]?.max_uses}
+                <CardFooter className="flex flex-col sm:flex-row justify-between w-full">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-primary">{referralCodes[0]?.uses_left}</span> / {referralCodes[0]?.max_uses} uses remaining
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mt-2 sm:mt-0">
                     Expires: {referralCodes[0]?.expires_at
                       ? new Date(referralCodes[0].expires_at).toLocaleDateString()
                       : "Never"}
@@ -285,7 +347,7 @@ const Referrals = () => {
             </Card>
 
             {/* Apply a referral code */}
-            <Card>
+            <Card className="h-fit">
               <CardHeader>
                 <CardTitle>Apply Referral Code</CardTitle>
                 <CardDescription>
@@ -319,6 +381,49 @@ const Referrals = () => {
                 </p>
               </CardFooter>
             </Card>
+
+            {/* Referral History */}
+            <Card className="h-fit">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Referral History</CardTitle>
+                  <CardDescription>
+                    People who used your referral code
+                  </CardDescription>
+                </div>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {referralHistory.length > 0 ? (
+                  <ul className="space-y-2">
+                    {referralHistory.map((referral) => (
+                      <li 
+                        key={referral.id}
+                        className="flex items-center justify-between p-2 rounded-md bg-card/50 hover:bg-card/80 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="rounded-full bg-primary/10 p-1">
+                            <Users size={16} className="text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{referral.friend_name}</p>
+                            <p className="text-xs text-muted-foreground">{referral.date}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                          {referral.reward}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p>No referrals yet</p>
+                    <p className="text-sm">Share your code to get started</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Rewards explanation */}
@@ -328,7 +433,7 @@ const Referrals = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-card/50">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
                   <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
                     <Gift className="h-5 w-5 text-primary" />
                   </div>
@@ -337,18 +442,18 @@ const Referrals = () => {
                     Give your unique referral code to friends and family
                   </p>
                 </div>
-                <div className="p-4 rounded-lg bg-card/50">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
                   <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
-                    <Gift className="h-5 w-5 text-primary" />
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-medium mb-1">2. Friends Sign Up</h3>
                   <p className="text-sm text-muted-foreground">
                     They create an account and apply your referral code
                   </p>
                 </div>
-                <div className="p-4 rounded-lg bg-card/50">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
                   <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
-                    <Gift className="h-5 w-5 text-primary" />
+                    <Award className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="font-medium mb-1">3. Both Get Rewarded</h3>
                   <p className="text-sm text-muted-foreground">
@@ -356,6 +461,56 @@ const Referrals = () => {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+          
+          {/* Premium Benefits */}
+          <Card className="mt-6 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/20 to-purple-500/20">
+              <CardTitle>Premium Benefits</CardTitle>
+              <CardDescription>
+                What you and your friends get with Premium access
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="divide-y divide-white/5">
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Check size={16} className="text-primary" />
+                    </div>
+                    <span>Ad-free listening</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </li>
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Check size={16} className="text-primary" />
+                    </div>
+                    <span>Higher quality audio</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </li>
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Check size={16} className="text-primary" />
+                    </div>
+                    <span>Unlimited skips</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </li>
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-primary/10 p-2">
+                      <Check size={16} className="text-primary" />
+                    </div>
+                    <span>Offline listening</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </li>
+              </ul>
             </CardContent>
           </Card>
         </div>

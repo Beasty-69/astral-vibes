@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AudioPlayerProvider } from "./components/Player/AudioPlayer";
+import MobileNav from "./components/MobileNav";
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Library from "./pages/Library";
@@ -25,6 +26,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <MobileNav />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/search" element={<Search />} />
