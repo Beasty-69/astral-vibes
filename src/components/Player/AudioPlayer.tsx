@@ -16,6 +16,7 @@ interface AudioPlayerContextType {
   setVolume: (volume: number) => void;
   toggleLike: (songId: string) => Promise<void>;
   isLiked: (songId: string) => Promise<boolean>;
+  stop: () => void;
 }
 
 interface Song {
@@ -297,6 +298,27 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
+  const stop = () => {
+    if (!audioRef.current) return;
+    
+    if (currentSong && isPlaying) {
+      const playedDuration = currentTime;
+      trackPlayCompletion(currentSong.id, playedDuration);
+    }
+    
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+    setIsPlaying(false);
+    setCurrentSong(null);
+    setCurrentTime(0);
+    setDuration(0);
+    
+    if (playTimer.current) {
+      clearTimeout(playTimer.current);
+      playTimer.current = null;
+    }
+  };
+
   return (
     <AudioPlayerContext.Provider
       value={{
@@ -313,6 +335,7 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         setVolume: updateVolume,
         toggleLike,
         isLiked,
+        stop,
       }}
     >
       {children}
