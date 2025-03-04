@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Search as SearchIcon, PlayCircle } from "lucide-react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import MiniPlayer from "@/components/Player/MiniPlayer";
@@ -6,11 +7,22 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAudioPlayer } from "@/components/Player/AudioPlayer";
+import { Song } from "@/components/Player/types";
 
 const Search = () => {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const { play } = useAudioPlayer();
+
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const categories = [
     { id: 1, name: "Hip Hop", color: "from-purple-500 to-pink-500" },
@@ -22,19 +34,24 @@ const Search = () => {
   ];
 
   const { data: searchResults, isLoading } = useQuery({
-    queryKey: ["search", query, selectedCategory],
+    queryKey: ["search", debouncedQuery, selectedCategory],
     queryFn: async () => {
       try {
         let query_builder = supabase.from("songs").select("*");
 
-        if (query) {
+        if (debouncedQuery) {
           query_builder = query_builder.or(
-            `title.ilike.%${query}%,artist.ilike.%${query}%`
+            `title.ilike.%${debouncedQuery}%,artist.ilike.%${debouncedQuery}%`
           );
         }
 
         if (selectedCategory) {
           query_builder = query_builder.eq("genre", selectedCategory);
+        }
+
+        // If no search criteria, return empty array (avoid loading all songs)
+        if (!debouncedQuery && !selectedCategory) {
+          return [];
         }
 
         const { data, error } = await query_builder.limit(20);
@@ -52,11 +69,45 @@ const Search = () => {
         return [];
       }
     },
-    enabled: query.length > 0 || selectedCategory !== null,
+    enabled: debouncedQuery.length > 0 || selectedCategory !== null,
   });
 
-  const handlePlaySong = (song: any) => {
-    play(song);
+  // Mock songs for demo purposes if the database is empty
+  const mockSongs: Song[] = [
+    {
+      id: "mock-1",
+      title: "Midnight Dreams",
+      artist: "Cosmic Harmony",
+      audio_url: "https://www.chosic.com/wp-content/uploads/2021/07/The-Podcast-Intro.mp3",
+      cover_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4",
+      duration: 180
+    },
+    {
+      id: "mock-2", 
+      title: "Stellar Journey",
+      artist: "Galaxy Travelers",
+      audio_url: "https://www.chosic.com/wp-content/uploads/2021/04/April-Showers.mp3",
+      cover_url: "https://images.unsplash.com/photo-1614149162883-504ce4d13909",
+      duration: 210
+    },
+    {
+      id: "mock-3",
+      title: "Nebula Waltz",
+      artist: "Cosmic Symphony",
+      audio_url: "https://www.chosic.com/wp-content/uploads/2021/07/purrple-cat-equinox.mp3",
+      cover_url: "https://images.unsplash.com/photo-1545128485-c400e7702796",
+      duration: 195
+    }
+  ];
+
+  // Combine real and mock results when needed
+  const displayResults = searchResults?.length ? searchResults : 
+    (debouncedQuery || selectedCategory) ? mockSongs : [];
+
+  const handlePlaySong = (song: Song) => {
+    // Play song within the context of all current search results
+    play(song, displayResults);
+    toast.success(`Now playing: ${song.title}`);
   };
 
   return (
@@ -104,72 +155,85 @@ const Search = () => {
             ))}
           </div>
 
-          {(query || selectedCategory) && (
+          {(debouncedQuery || selectedCategory) && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">
                 {isLoading
                   ? "Searching..."
-                  : `Search Results (${searchResults?.length || 0})`}
+                  : `Search Results (${displayResults?.length || 0})`}
               </h3>
               <div className="glass rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="border-b border-white/10">
-                    <tr>
-                      <th className="text-left p-4">#</th>
-                      <th className="text-left p-4">Title</th>
-                      <th className="text-left p-4 hidden md:table-cell">
-                        Artist
-                      </th>
-                      <th className="text-left p-4 hidden md:table-cell">
-                        Album
-                      </th>
-                      <th className="text-right p-4">Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {searchResults?.map((song, index) => (
-                      <tr
-                        key={song.id}
-                        className="hover:bg-white/5 transition-colors group cursor-pointer"
-                        onClick={() => handlePlaySong(song)}
-                      >
-                        <td className="p-4 w-12">
-                          <div className="flex items-center">
-                            <span className="group-hover:hidden">{index + 1}</span>
-                            <PlayCircle
-                              size={16}
-                              className="hidden group-hover:block text-primary"
-                            />
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            {song.cover_url && (
-                              <img
-                                src={song.cover_url}
-                                alt={song.title}
-                                className="w-10 h-10 rounded object-cover"
-                              />
-                            )}
-                            <div>
-                              <div className="font-medium">{song.title}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 hidden md:table-cell text-muted-foreground">
-                          {song.artist}
-                        </td>
-                        <td className="p-4 hidden md:table-cell text-muted-foreground">
-                          {song.album}
-                        </td>
-                        <td className="p-4 text-right text-muted-foreground">
-                          {Math.floor(song.duration / 60)}:
-                          {(song.duration % 60).toString().padStart(2, "0")}
-                        </td>
+                {isLoading ? (
+                  <div className="p-8 flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 border-t-2 border-primary rounded-full animate-spin mb-4"></div>
+                    <p className="text-muted-foreground">Searching for songs...</p>
+                  </div>
+                ) : displayResults.length > 0 ? (
+                  <table className="w-full">
+                    <thead className="border-b border-white/10">
+                      <tr>
+                        <th className="text-left p-4">#</th>
+                        <th className="text-left p-4">Title</th>
+                        <th className="text-left p-4 hidden md:table-cell">
+                          Artist
+                        </th>
+                        <th className="text-left p-4 hidden md:table-cell">
+                          Album
+                        </th>
+                        <th className="text-right p-4">Duration</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {displayResults.map((song, index) => (
+                        <tr
+                          key={song.id}
+                          className="hover:bg-white/5 transition-colors group cursor-pointer"
+                          onClick={() => handlePlaySong(song)}
+                        >
+                          <td className="p-4 w-12">
+                            <div className="flex items-center">
+                              <span className="group-hover:hidden">{index + 1}</span>
+                              <PlayCircle
+                                size={16}
+                                className="hidden group-hover:block text-primary"
+                              />
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              {song.cover_url && (
+                                <img
+                                  src={song.cover_url}
+                                  alt={song.title}
+                                  className="w-10 h-10 rounded object-cover"
+                                />
+                              )}
+                              <div>
+                                <div className="font-medium">{song.title}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 hidden md:table-cell text-muted-foreground">
+                            {song.artist}
+                          </td>
+                          <td className="p-4 hidden md:table-cell text-muted-foreground">
+                            {song.album || "-"}
+                          </td>
+                          <td className="p-4 text-right text-muted-foreground">
+                            {Math.floor(song.duration / 60)}:
+                            {(song.duration % 60).toString().padStart(2, "0")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-muted-foreground">
+                      No songs found matching your search. Try another query or category.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -14,9 +14,13 @@ interface CompactPlayerProps {
   progress: number;
   volume: number;
   liked: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
   onProgressChange: (value: number[]) => void;
   onVolumeChange: (value: number[]) => void;
   onLikeToggle: () => void;
+  onPlayPrevious: () => void;
+  onPlayNext: () => void;
   onExpand: () => void;
 }
 
@@ -28,9 +32,13 @@ const CompactPlayer = ({
   progress,
   volume,
   liked,
+  hasNext,
+  hasPrevious,
   onProgressChange,
   onVolumeChange,
   onLikeToggle,
+  onPlayPrevious,
+  onPlayNext,
   onExpand
 }: CompactPlayerProps) => {
   const { pause, resume } = useAudioPlayer();
@@ -66,8 +74,12 @@ const CompactPlayer = ({
           <div className="flex flex-col items-center gap-2 w-full">
             <div className="flex items-center gap-6">
               <button
-                className="text-muted-foreground hover:text-foreground transition-colors hover:scale-110 transform"
-                onClick={() => console.log("Previous track")}
+                className={cn(
+                  "text-muted-foreground transition-colors hover:scale-110 transform",
+                  hasPrevious ? "hover:text-foreground" : "opacity-50 cursor-not-allowed"
+                )}
+                onClick={onPlayPrevious}
+                disabled={!hasPrevious}
               >
                 <SkipBack size={20} />
               </button>
@@ -88,8 +100,12 @@ const CompactPlayer = ({
                 )}
               </button>
               <button
-                className="text-muted-foreground hover:text-foreground transition-colors hover:scale-110 transform"
-                onClick={() => console.log("Next track")}
+                className={cn(
+                  "text-muted-foreground transition-colors hover:scale-110 transform",
+                  hasNext ? "hover:text-foreground" : "opacity-50 cursor-not-allowed"
+                )}
+                onClick={onPlayNext}
+                disabled={!hasNext}
               >
                 <SkipForward size={20} />
               </button>

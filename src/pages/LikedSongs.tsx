@@ -10,10 +10,20 @@ import { useAudioPlayer } from "@/components/Player/AudioPlayer";
 
 const LikedSongs = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const { play } = useAudioPlayer();
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const { data: likedSongs, isLoading } = useQuery({
-    queryKey: ["likedSongs", searchQuery],
+    queryKey: ["likedSongs", debouncedQuery],
     queryFn: async () => {
       try {
         // Fetch the liked songs with a join to the songs table
@@ -42,8 +52,8 @@ const LikedSongs = () => {
 
         // Filter by search query if provided
         let filteredData = data;
-        if (searchQuery) {
-          const lowerQuery = searchQuery.toLowerCase();
+        if (debouncedQuery) {
+          const lowerQuery = debouncedQuery.toLowerCase();
           filteredData = data.filter(
             (item) =>
               item.songs.title.toLowerCase().includes(lowerQuery) ||
@@ -70,8 +80,15 @@ const LikedSongs = () => {
     }
   });
 
-  const handlePlaySong = (song: any) => {
-    play(song);
+  const handlePlaySong = (song: any, index: number) => {
+    // Create a playlist from the liked songs
+    if (likedSongs && likedSongs.length > 0) {
+      play(song, likedSongs);
+      toast.success(`Now playing: ${song.title}`);
+    } else {
+      play(song);
+      toast.success(`Now playing: ${song.title}`);
+    }
   };
 
   const formatDuration = (seconds: number) => {
@@ -87,7 +104,7 @@ const LikedSongs = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end gap-8 mb-8">
             <div className="flex-shrink-0 w-48 h-48 rounded-lg bg-gradient-to-br from-primary/20 to-purple-600/20 glass p-6 flex items-center justify-center">
-              <Heart className="w-24 h-24 text-primary" />
+              <Heart className="w-24 h-24 text-primary animate-pulse" />
             </div>
             <div className="flex-1">
               <h4 className="text-sm font-medium text-muted-foreground mb-2">PLAYLIST</h4>
@@ -125,7 +142,7 @@ const LikedSongs = () => {
                   <tr>
                     <th className="text-left p-4">#</th>
                     <th className="text-left p-4">Title</th>
-                    <th className="text-left p-4">Album</th>
+                    <th className="text-left p-4 hidden md:table-cell">Album</th>
                     <th className="text-right p-4">
                       <Clock size={16} />
                     </th>
@@ -136,7 +153,7 @@ const LikedSongs = () => {
                     <tr
                       key={song.id}
                       className="hover:bg-white/5 transition-colors group cursor-pointer"
-                      onClick={() => handlePlaySong(song)}
+                      onClick={() => handlePlaySong(song, index)}
                     >
                       <td className="p-4 w-12">
                         <div className="flex items-center">
@@ -159,7 +176,7 @@ const LikedSongs = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-muted-foreground">{song.album}</td>
+                      <td className="p-4 text-muted-foreground hidden md:table-cell">{song.album}</td>
                       <td className="p-4 text-right text-muted-foreground">{formatDuration(song.duration)}</td>
                     </tr>
                   ))}
@@ -168,7 +185,7 @@ const LikedSongs = () => {
             ) : (
               <div className="p-8 text-center">
                 <p className="text-muted-foreground">
-                  {searchQuery
+                  {debouncedQuery
                     ? "No matching songs found. Try a different search."
                     : "No liked songs yet. Start liking songs to see them here!"}
                 </p>

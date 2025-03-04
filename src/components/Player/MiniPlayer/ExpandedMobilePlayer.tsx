@@ -15,9 +15,13 @@ interface ExpandedMobilePlayerProps {
   progress: number;
   volume: number;
   liked: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
   onProgressChange: (value: number[]) => void;
   onVolumeChange: (value: number[]) => void;
   onLikeToggle: () => void;
+  onPlayPrevious: () => void;
+  onPlayNext: () => void;
   onCollapse: () => void;
   onClose: () => void;
 }
@@ -30,9 +34,13 @@ const ExpandedMobilePlayer = ({
   progress,
   volume,
   liked,
+  hasNext,
+  hasPrevious,
   onProgressChange,
   onVolumeChange,
   onLikeToggle,
+  onPlayPrevious,
+  onPlayNext,
   onCollapse,
   onClose
 }: ExpandedMobilePlayerProps) => {
@@ -57,7 +65,7 @@ const ExpandedMobilePlayer = ({
       <div className="w-full max-w-xs aspect-square mb-8 relative z-10 group">
         <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 via-purple-500/10 to-transparent rounded-full blur-xl opacity-70 group-hover:opacity-100 animate-pulse transition-opacity"></div>
         <img
-          src={currentSong.cover_url}
+          src={currentSong.cover_url || "/placeholder.svg"}
           alt={currentSong.title}
           className="w-full h-full object-cover rounded-xl shadow-xl relative z-10 animate-float"
         />
@@ -92,8 +100,12 @@ const ExpandedMobilePlayer = ({
       
       <div className="flex items-center justify-center gap-8 mb-8 relative z-10">
         <button
-          className="text-muted-foreground hover:text-foreground transition-all hover:scale-110 transform"
-          onClick={() => console.log("Previous track")}
+          className={cn(
+            "text-muted-foreground transition-all hover:scale-110 transform",
+            hasPrevious ? "hover:text-foreground" : "opacity-50 cursor-not-allowed"
+          )}
+          onClick={onPlayPrevious}
+          disabled={!hasPrevious}
         >
           <SkipBack size={28} />
         </button>
@@ -115,8 +127,12 @@ const ExpandedMobilePlayer = ({
           )}
         </button>
         <button
-          className="text-muted-foreground hover:text-foreground transition-all hover:scale-110 transform"
-          onClick={() => console.log("Next track")}
+          className={cn(
+            "text-muted-foreground transition-all hover:scale-110 transform",
+            hasNext ? "hover:text-foreground" : "opacity-50 cursor-not-allowed"
+          )}
+          onClick={onPlayNext}
+          disabled={!hasNext}
         >
           <SkipForward size={28} />
         </button>

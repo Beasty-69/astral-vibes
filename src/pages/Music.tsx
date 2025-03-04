@@ -89,16 +89,31 @@ const ccFreeSongs: Song[] = [
 
 const Music = () => {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showFeatured, setShowFeatured] = useState(true);
   const { play } = useAudioPlayer();
   const navigate = useNavigate();
 
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["spotify-search", query],
+    queryKey: ["spotify-search", debouncedQuery],
     queryFn: async () => {
       try {
+        // Check if query is empty
+        if (!debouncedQuery) {
+          return { tracks: { items: [] } };
+        }
+
         const { data, error } = await supabase.functions.invoke("spotify/search", {
-          body: { query }
+          body: { query: debouncedQuery }
         });
 
         if (error) {
@@ -114,7 +129,7 @@ const Music = () => {
         return { tracks: { items: [] } };
       }
     },
-    enabled: query.length > 0,
+    enabled: debouncedQuery.length > 0,
   });
 
   const { data: newReleases, isLoading: newReleasesLoading } = useQuery({
@@ -157,11 +172,27 @@ const Music = () => {
       duration: Math.floor(track.duration_ms / 1000)
     };
     
-    play(song);
+    // Create playlist from all available tracks with previews
+    const allTracks = searchResults?.tracks?.items || [];
+    const playableTracks = allTracks.filter(t => t.preview_url);
+    const playlist = playableTracks.map(t => ({
+      id: t.id,
+      title: t.name,
+      artist: t.artists.map(a => a.name).join(", "),
+      album: t.album.name,
+      audio_url: t.preview_url!,
+      cover_url: t.album.images[0]?.url,
+      duration: Math.floor(t.duration_ms / 1000)
+    }));
+    
+    // Play the selected song with the playlist context
+    play(song, playlist);
+    toast.success(`Now playing: ${song.title}`);
   };
 
   const handlePlayCCTrack = (song: Song) => {
-    play(song);
+    // Play with all CC songs as the playlist
+    play(song, ccFreeSongs);
     toast.success(`Now playing: ${song.title}`);
   };
 
@@ -176,10 +207,12 @@ const Music = () => {
   };
 
   useEffect(() => {
-    if (query) {
+    if (debouncedQuery) {
       setShowFeatured(false);
+    } else {
+      setShowFeatured(true);
     }
-  }, [query]);
+  }, [debouncedQuery]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -207,7 +240,7 @@ const Music = () => {
             </div>
           </div>
 
-          {!query && (
+          {!debouncedQuery && (
             <div className="mb-10">
               <h2 className="text-xl md:text-2xl font-bold mb-4">CC Free Music</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
@@ -275,12 +308,12 @@ const Music = () => {
             </div>
           )}
 
-          {query && (
+          {debouncedQuery && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">
                 {searchLoading
                   ? "Searching..."
-                  : `Search Results for "${query}"`}
+                  : `Search Results for "${debouncedQuery}"`}
               </h2>
               <div className="glass rounded-lg overflow-hidden">
                 {searchLoading ? (
@@ -361,7 +394,7 @@ const Music = () => {
                   <div className="p-8 text-center">
                     <MusicIcon size={40} className="mx-auto text-muted-foreground" />
                     <p className="mt-4 text-muted-foreground">
-                      {query
+                      {debouncedQuery
                         ? "No matching tracks found. Try a different search."
                         : "Start searching for tracks on Spotify."}
                     </p>
@@ -371,7 +404,7 @@ const Music = () => {
             </div>
           )}
 
-          {!query && !showFeatured && (
+          {!debouncedQuery && !showFeatured && (
             <div className="p-8 text-center glass rounded-lg">
               <MusicIcon size={40} className="mx-auto text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">

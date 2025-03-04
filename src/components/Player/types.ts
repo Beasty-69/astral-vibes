@@ -8,6 +8,11 @@ export interface Song {
   duration: number;
 }
 
+export interface Playlist {
+  songs: Song[];
+  currentIndex: number;
+}
+
 export interface AudioPlayerContextType {
   currentSong: Song | null;
   isPlaying: boolean;
@@ -15,7 +20,8 @@ export interface AudioPlayerContextType {
   currentTime: number;
   progress: number;
   volume: number;
-  play: (song: Song) => void;
+  playlist: Playlist | null;
+  play: (song: Song, playlistSongs?: Song[]) => void;
   pause: () => void;
   resume: () => void;
   seek: (time: number) => void;
@@ -23,4 +29,8 @@ export interface AudioPlayerContextType {
   toggleLike: (songId: string) => Promise<void>;
   isLiked: (songId: string) => Promise<boolean>;
   stop: () => void;
+  playNext: () => void;
+  playPrevious: () => void;
+  hasNext: () => boolean;
+  hasPrevious: () => boolean;
 }

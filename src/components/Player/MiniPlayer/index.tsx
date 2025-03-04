@@ -18,7 +18,11 @@ const MiniPlayer = () => {
     setVolume,
     toggleLike,
     isLiked,
-    stop
+    stop,
+    playNext,
+    playPrevious,
+    hasNext,
+    hasPrevious
   } = useAudioPlayer();
 
   const [liked, setLiked] = useState(false);
@@ -53,6 +57,14 @@ const MiniPlayer = () => {
     }
   };
 
+  const handlePlayNext = () => {
+    playNext();
+  };
+
+  const handlePlayPrevious = () => {
+    playPrevious();
+  };
+
   const toggleExpandedView = () => {
     setExpanded(!expanded);
   };
@@ -75,9 +87,13 @@ const MiniPlayer = () => {
           progress={progress}
           volume={volume}
           liked={liked}
+          hasNext={hasNext()}
+          hasPrevious={hasPrevious()}
           onProgressChange={handleProgressChange}
           onVolumeChange={handleVolumeChange}
           onLikeToggle={handleLikeToggle}
+          onPlayNext={handlePlayNext}
+          onPlayPrevious={handlePlayPrevious}
           onCollapse={toggleExpandedView}
           onClose={closePlayer}
         />
@@ -92,9 +108,13 @@ const MiniPlayer = () => {
         progress={progress}
         volume={volume}
         liked={liked}
+        hasNext={hasNext()}
+        hasPrevious={hasPrevious()}
         onProgressChange={handleProgressChange}
         onVolumeChange={handleVolumeChange}
         onLikeToggle={handleLikeToggle}
+        onPlayNext={handlePlayNext}
+        onPlayPrevious={handlePlayPrevious}
         onExpand={toggleExpandedView}
       />
     </>

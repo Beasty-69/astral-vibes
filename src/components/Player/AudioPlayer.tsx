@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { AudioPlayerContext } from "./AudioPlayerContext";
 import { useSongTracking } from "./useSongTracking";
 import { useSongLikes } from "./useSongLikes";
-import { Song } from "./types";
+import { Song, Playlist } from "./types";
 
 export { useAudioPlayer } from "./AudioPlayerContext";
 
@@ -14,6 +14,7 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,6 +41,17 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
       if (currentSong) {
         trackPlayCompletion(currentSong.id, audio.duration);
       }
+      
+      // Auto-play next song when current song ends
+      if (playlist && playlist.currentIndex < playlist.songs.length - 1) {
+        const nextIndex = playlist.currentIndex + 1;
+        const nextSong = playlist.songs[nextIndex];
+        
+        // Small delay before playing next song
+        setTimeout(() => {
+          playFromPlaylist(nextSong, playlist.songs, nextIndex);
+        }, 500);
+      }
     });
 
     audio.addEventListener("error", (e) => {
@@ -58,7 +70,39 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const play = async (song: Song) => {
+  const playFromPlaylist = (song: Song, songs: Song[], index: number) => {
+    if (!audioRef.current) return;
+    
+    setPlaylist({
+      songs,
+      currentIndex: index
+    });
+    
+    audioRef.current.src = song.audio_url;
+    audioRef.current.volume = volume;
+    audioRef.current.play()
+      .then(() => {
+        setCurrentSong(song);
+        setIsPlaying(true);
+        trackPlayStart(song.id);
+      })
+      .catch((error) => {
+        console.error("Playback error:", error);
+        toast.error("Failed to play song");
+      });
+      
+    if (playTimer.current) {
+      clearTimeout(playTimer.current);
+    }
+    
+    playTimer.current = setInterval(() => {
+      if (audioRef.current && currentSong && isPlaying) {
+        trackPlayProgress(currentSong.id, audioRef.current.currentTime);
+      }
+    }, 30000);
+  };
+
+  const play = async (song: Song, playlistSongs?: Song[]) => {
     if (!audioRef.current) return;
 
     try {
@@ -73,12 +117,25 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         
         trackPlayCompletion(currentSong.id, playedDuration);
       }
+      
+      // If a playlist is provided, update the playlist state
+      if (playlistSongs) {
+        const songIndex = playlistSongs.findIndex(s => s.id === song.id);
+        if (songIndex !== -1) {
+          playFromPlaylist(song, playlistSongs, songIndex);
+          return;
+        }
+      }
 
+      // Single song play
       audioRef.current.src = song.audio_url;
       audioRef.current.volume = volume;
       await audioRef.current.play();
       setCurrentSong(song);
       setIsPlaying(true);
+      
+      // Reset playlist when playing a single song
+      setPlaylist(null);
       
       trackPlayStart(song.id);
       
@@ -96,6 +153,30 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
       console.error("Playback error:", error);
       toast.error("Failed to play song");
     }
+  };
+
+  const playNext = () => {
+    if (!playlist || !hasNext()) return;
+    
+    const nextIndex = playlist.currentIndex + 1;
+    const nextSong = playlist.songs[nextIndex];
+    playFromPlaylist(nextSong, playlist.songs, nextIndex);
+  };
+  
+  const playPrevious = () => {
+    if (!playlist || !hasPrevious()) return;
+    
+    const prevIndex = playlist.currentIndex - 1;
+    const prevSong = playlist.songs[prevIndex];
+    playFromPlaylist(prevSong, playlist.songs, prevIndex);
+  };
+  
+  const hasNext = () => {
+    return !!playlist && playlist.currentIndex < playlist.songs.length - 1;
+  };
+  
+  const hasPrevious = () => {
+    return !!playlist && playlist.currentIndex > 0;
   };
 
   const pause = () => {
@@ -146,6 +227,7 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     setCurrentSong(null);
     setCurrentTime(0);
     setDuration(0);
+    setPlaylist(null);
     
     if (playTimer.current) {
       clearTimeout(playTimer.current);
@@ -162,6 +244,7 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         currentTime,
         progress,
         volume,
+        playlist,
         play,
         pause,
         resume,
@@ -170,6 +253,10 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         toggleLike,
         isLiked,
         stop,
+        playNext,
+        playPrevious,
+        hasNext,
+        hasPrevious
       }}
     >
       {children}
