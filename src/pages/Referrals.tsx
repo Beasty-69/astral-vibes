@@ -264,14 +264,25 @@ const Referrals = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Space-themed animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="stars-bg"></div>
+        <div className="nebula-glow"></div>
+        <div className="absolute top-1/4 left-1/3 w-[100px] h-[100px] rounded-full bg-primary/10 blur-3xl animate-pulse"></div>
+        <div className="absolute top-2/3 right-1/4 w-[150px] h-[150px] rounded-full bg-purple-600/10 blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+      </div>
+
       <Sidebar />
-      <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24">
+      <main className="ml-0 md:ml-60 p-4 md:p-8 pb-24 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center mb-8">
-            <Gift className="w-10 h-10 mr-4 text-primary" />
+          <div className="flex items-center mb-8 animate-fade-in">
+            <div className="relative">
+              <Gift className="w-10 h-10 mr-4 text-primary" />
+              <div className="absolute -inset-1 rounded-full bg-primary/20 blur-sm animate-pulse"></div>
+            </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Referrals</h1>
+              <h1 className="text-2xl md:text-3xl font-bold animate-glow">Referrals</h1>
               <p className="text-muted-foreground">
                 Share Nebula with friends and get rewards
               </p>
@@ -280,9 +291,9 @@ const Referrals = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Your referral code */}
-            <Card className="md:col-span-2 bg-gradient-to-br from-purple-900/30 to-primary/10 glass border-primary/20">
+            <Card className="md:col-span-2 bg-gradient-to-br from-purple-900/30 to-primary/10 glass border-primary/20 animate-fade-in hover:shadow-lg hover:shadow-primary/5 transition-all">
               <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">Your Referral Code</CardTitle>
+                <CardTitle className="text-xl md:text-2xl animate-glow">Your Referral Code</CardTitle>
                 <CardDescription>
                   Share this code with friends to give them 7 days of premium access
                 </CardDescription>
@@ -294,23 +305,27 @@ const Referrals = () => {
                   </div>
                 ) : referralCode ? (
                   <div className="flex flex-col md:flex-row gap-2">
-                    <div className="relative flex-grow">
+                    <div className="relative flex-grow group">
                       <Input
                         value={referralCode}
                         readOnly
-                        className="font-mono text-lg tracking-wider pr-10 bg-card/50"
+                        className="font-mono text-lg tracking-wider pr-10 bg-card/50 border-white/10 transition-all group-hover:border-primary/50"
                       />
+                      <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
+                      </div>
                       <CopyToClipboardButton
                         text={referralCode}
                         variant="ghost"
-                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/10 transition-colors"
                         successMessage="Code copied to clipboard!"
                       />
                     </div>
                     <Button
-                      className="gap-2 mt-2 md:mt-0"
+                      className="gap-2 mt-2 md:mt-0 group relative overflow-hidden"
                       onClick={shareReferralCode}
                     >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                       <Share size={16} />
                       <span>Share</span>
                     </Button>
@@ -319,8 +334,9 @@ const Referrals = () => {
                   <Button
                     onClick={generateReferralCode}
                     disabled={generatingCode}
-                    className="w-full"
+                    className="w-full group relative overflow-hidden"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                     {generatingCode ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -347,7 +363,7 @@ const Referrals = () => {
             </Card>
 
             {/* Apply a referral code */}
-            <Card className="h-fit">
+            <Card className="h-fit animate-fade-in hover:shadow-lg transition-all" style={{animationDelay: '0.1s'}}>
               <CardHeader>
                 <CardTitle>Apply Referral Code</CardTitle>
                 <CardDescription>
@@ -356,17 +372,23 @@ const Referrals = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter code (e.g. ABC-123-XYZ)"
-                    value={codeInput}
-                    onChange={(e) => setCodeInput(e.target.value)}
-                    className="font-mono"
-                  />
+                  <div className="relative flex-grow">
+                    <Input
+                      placeholder="Enter code (e.g. ABC-123-XYZ)"
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      className="font-mono transition-all focus:border-primary/50"
+                    />
+                    <div className="absolute inset-0 rounded-md pointer-events-none opacity-0 focus-within:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
+                    </div>
+                  </div>
                   <Button
                     onClick={applyReferralCode}
                     disabled={applyingCode || !codeInput}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 relative overflow-hidden group"
                   >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                     {applyingCode ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -383,7 +405,7 @@ const Referrals = () => {
             </Card>
 
             {/* Referral History */}
-            <Card className="h-fit">
+            <Card className="h-fit animate-fade-in hover:shadow-lg transition-all" style={{animationDelay: '0.2s'}}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <div>
                   <CardTitle>Referral History</CardTitle>
@@ -391,19 +413,24 @@ const Referrals = () => {
                     People who used your referral code
                   </CardDescription>
                 </div>
-                <Users className="h-5 w-5 text-muted-foreground" />
+                <div className="relative">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <div className="absolute -inset-1 rounded-full bg-primary/10 blur-sm opacity-0 group-hover:opacity-100"></div>
+                </div>
               </CardHeader>
               <CardContent>
                 {referralHistory.length > 0 ? (
                   <ul className="space-y-2">
-                    {referralHistory.map((referral) => (
+                    {referralHistory.map((referral, index) => (
                       <li 
                         key={referral.id}
-                        className="flex items-center justify-between p-2 rounded-md bg-card/50 hover:bg-card/80 transition-colors"
+                        className="flex items-center justify-between p-2 rounded-md bg-card/50 hover:bg-card/80 transition-colors hover:scale-[1.01] transform"
+                        style={{animationDelay: `${0.1 * index}s`}}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="rounded-full bg-primary/10 p-1">
+                          <div className="rounded-full bg-primary/10 p-1 relative">
                             <Users size={16} className="text-primary" />
+                            <div className="absolute -inset-1 rounded-full bg-primary/5 blur-sm opacity-0 group-hover:opacity-100"></div>
                           </div>
                           <div>
                             <p className="text-sm font-medium">{referral.friend_name}</p>
@@ -427,33 +454,36 @@ const Referrals = () => {
           </div>
 
           {/* Rewards explanation */}
-          <Card className="mt-6">
+          <Card className="mt-6 animate-fade-in hover:shadow-lg transition-all" style={{animationDelay: '0.3s'}}>
             <CardHeader>
               <CardTitle>How It Works</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
-                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px] group">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3 relative">
                     <Gift className="h-5 w-5 text-primary" />
+                    <div className="absolute -inset-1 rounded-full bg-primary/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <h3 className="font-medium mb-1">1. Share Your Code</h3>
                   <p className="text-sm text-muted-foreground">
                     Give your unique referral code to friends and family
                   </p>
                 </div>
-                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
-                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px] group">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3 relative">
                     <Users className="h-5 w-5 text-primary" />
+                    <div className="absolute -inset-1 rounded-full bg-primary/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <h3 className="font-medium mb-1">2. Friends Sign Up</h3>
                   <p className="text-sm text-muted-foreground">
                     They create an account and apply your referral code
                   </p>
                 </div>
-                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px]">
-                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3">
+                <div className="p-4 rounded-lg bg-card/50 transition-all hover:bg-card/70 hover:translate-y-[-2px] group">
+                  <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-3 relative">
                     <Award className="h-5 w-5 text-primary" />
+                    <div className="absolute -inset-1 rounded-full bg-primary/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <h3 className="font-medium mb-1">3. Both Get Rewarded</h3>
                   <p className="text-sm text-muted-foreground">
@@ -465,50 +495,60 @@ const Referrals = () => {
           </Card>
           
           {/* Premium Benefits */}
-          <Card className="mt-6 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-primary/20 to-purple-500/20">
-              <CardTitle>Premium Benefits</CardTitle>
-              <CardDescription>
-                What you and your friends get with Premium access
-              </CardDescription>
+          <Card className="mt-6 overflow-hidden animate-fade-in hover:shadow-lg transition-all" style={{animationDelay: '0.4s'}}>
+            <CardHeader className="bg-gradient-to-r from-primary/20 to-purple-500/20 relative">
+              <div className="absolute inset-0 opacity-30">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-purple-600/20 rounded-full blur-3xl transform-gpu"></div>
+                <div className="absolute bottom-0 left-0 w-40 h-40 bg-primary/20 rounded-full blur-3xl transform-gpu"></div>
+              </div>
+              <div className="relative z-10">
+                <CardTitle>Premium Benefits</CardTitle>
+                <CardDescription>
+                  What you and your friends get with Premium access
+                </CardDescription>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <ul className="divide-y divide-white/5">
-                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
+                    <div className="rounded-full bg-primary/10 p-2 relative">
                       <Check size={16} className="text-primary" />
+                      <div className="absolute -inset-1 rounded-full bg-primary/10 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     <span>Ad-free listening</span>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
+                  <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </li>
-                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
+                    <div className="rounded-full bg-primary/10 p-2 relative">
                       <Check size={16} className="text-primary" />
+                      <div className="absolute -inset-1 rounded-full bg-primary/10 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     <span>Higher quality audio</span>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
+                  <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </li>
-                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
+                    <div className="rounded-full bg-primary/10 p-2 relative">
                       <Check size={16} className="text-primary" />
+                      <div className="absolute -inset-1 rounded-full bg-primary/10 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     <span>Unlimited skips</span>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
+                  <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </li>
-                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors">
+                <li className="flex items-center justify-between p-4 hover:bg-card/60 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
+                    <div className="rounded-full bg-primary/10 p-2 relative">
                       <Check size={16} className="text-primary" />
+                      <div className="absolute -inset-1 rounded-full bg-primary/10 blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     <span>Offline listening</span>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
+                  <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </li>
               </ul>
             </CardContent>

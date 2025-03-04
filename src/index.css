@@ -49,5 +49,130 @@
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-primary/10 hover:text-primary;
   }
+  
+  /* Space animations and elements */
+  .stars-bg {
+    @apply absolute inset-0 z-0;
+    background-image: radial-gradient(white, rgba(255, 255, 255, 0.2) 2px, transparent 40px),
+                    radial-gradient(white, rgba(255, 255, 255, 0.15) 1px, transparent 30px),
+                    radial-gradient(white, rgba(255, 255, 255, 0.1) 2px, transparent 40px);
+    background-size: 550px 550px, 350px 350px, 250px 250px;
+    background-position: 0 0, 40px 60px, 130px 270px;
+    animation: twinkle 15s ease infinite;
+  }
+  
+  .nebula-glow {
+    @apply absolute inset-0 opacity-20 blur-3xl;
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(139, 92, 246, 0.5) 0%,
+      rgba(157, 78, 221, 0.3) 20%,
+      rgba(76, 29, 149, 0.1) 60%,
+      transparent 100%
+    );
+    animation: pulse 8s ease-in-out infinite alternate;
+  }
+  
+  .star-small {
+    @apply absolute w-[1px] h-[1px] bg-white rounded-full;
+    box-shadow: 0 0 10px 1px white;
+    top: 10%;
+    left: 45%;
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  
+  .star-medium {
+    @apply absolute w-[2px] h-[2px] bg-white rounded-full;
+    box-shadow: 0 0 10px 2px white;
+    top: 40%;
+    left: 75%;
+    animation: twinkle 6s ease-in-out infinite;
+  }
+  
+  .star-large {
+    @apply absolute w-[3px] h-[3px] bg-white rounded-full;
+    box-shadow: 0 0 15px 3px white;
+    top: 70%;
+    left: 20%;
+    animation: twinkle 8s ease-in-out infinite;
+  }
+  
+  /* Animation for the cover art floating effect */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  /* Animation for text glowing effect */
+  .animate-glow {
+    animation: glow 3s ease-in-out infinite alternate;
+  }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(139, 92, 246, 0.7), 0 0 20px rgba(139, 92, 246, 0.5);
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes starMovement {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* Add more animations to tailwind */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeInScale 0.5s ease-out forwards;
+  }
+  
+  .animate-pulse {
+    animation: pulse 4s ease-in-out infinite;
+  }
+}
